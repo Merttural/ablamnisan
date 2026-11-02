@@ -11,15 +11,16 @@ export function HowItWorks() {
         <h2 className="mt-5 max-w-xl text-balance font-serif text-4xl leading-[1.05] font-medium tracking-[-0.02em] text-charcoal sm:text-5xl">
           Nasıl çalışır?
         </h2>
-        <ol className="mt-14 grid gap-8 sm:grid-cols-2 md:mt-20 lg:grid-cols-4 lg:gap-10">
+        <ol className="mt-10 grid gap-3 md:mt-16 md:grid-cols-2 md:gap-4 lg:grid-cols-4">
           {howItWorksSteps.map((step, index) => (
-            <li key={step} className="border-t border-charcoal/10 pt-6">
-              <span className="font-serif text-3xl text-charcoal">
-                {String(index + 1).padStart(2, "0")}
+            <li
+              key={step}
+              className="flex items-center gap-4 border-2 border-charcoal/25 bg-champagne/45 p-4 md:flex-col md:items-start md:p-6"
+            >
+              <span className="grid size-12 shrink-0 place-items-center bg-charcoal font-serif text-2xl text-ivory">
+                {index + 1}
               </span>
-              <p className="mt-4 text-pretty font-serif text-2xl leading-snug text-charcoal">
-                {step}
-              </p>
+              <p className="text-pretty font-serif text-2xl leading-snug text-charcoal">{step}</p>
             </li>
           ))}
         </ol>

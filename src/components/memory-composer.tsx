@@ -108,9 +108,9 @@ export function MemoryComposer() {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => chooseKind(item.id)}
-                  className={`flex min-h-16 items-center gap-4 border px-5 py-4 text-left transition-colors duration-300 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-charcoal ${selected ? "border-charcoal bg-champagne/70" : "border-charcoal/15 bg-transparent hover:border-charcoal/40"}`}
+                  className={`flex min-h-[4.5rem] items-center gap-4 border-2 px-5 py-4 text-left transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal ${selected ? "border-charcoal bg-charcoal text-ivory" : "border-charcoal/30 bg-champagne/55 text-charcoal"}`}
                 >
-                  <Icon className="size-5 shrink-0" strokeWidth={1.25} aria-hidden />
+                  <Icon className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />
                   <span className="font-serif text-2xl leading-none tracking-tight">{item.action}</span>
                 </button>
               );
@@ -165,9 +165,8 @@ export function MemoryComposer() {
               </label>
             )}
 
-            <p className="mt-10 border border-charcoal/10 px-5 py-4 text-sm leading-6 text-taupe">
-              Albüm birazdan anı kabul edecek. Bu ekranda seçtiğin dosya yalnızca cihazında
-              durur; gönderilmiş sayılmaz.
+            <p className="mt-10 border-2 border-charcoal/20 bg-champagne/40 px-5 py-4 text-base leading-7 text-charcoal">
+              Henüz göndermiyoruz. Seçtiğin dosya şimdilik sadece bu telefonda durur.
             </p>
             <Link
               href="/"
@@ -210,8 +209,20 @@ function MediaFields({
 
       {kind.id === "ses" ? (
         <VoiceCapture kind={kind} onFile={onFile} />
+      ) : kind.id === "fotograf" ? (
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FilePicker
+            kind={kind}
+            onFile={onFile}
+            label="Fotoğraf çek"
+            capture="environment"
+            acceptAttr="image/*"
+            className=""
+          />
+          <FilePicker kind={kind} onFile={onFile} label="Galeriden seç" className="" />
+        </div>
       ) : (
-        <FilePicker kind={kind} onFile={onFile} />
+        <FilePicker kind={kind} onFile={onFile} label="Video seç" />
       )}
 
       {error ? <p className="mt-4 text-sm leading-6 text-charcoal">{error}</p> : null}
@@ -255,10 +266,16 @@ function FilePicker({
   kind,
   onFile,
   className = "mt-6",
+  label = "Dosya seç",
+  capture,
+  acceptAttr,
 }: {
   kind: MediaKind;
   onFile: (file: File) => void;
   className?: string;
+  label?: string;
+  capture?: "user" | "environment";
+  acceptAttr?: string;
 }) {
   const inputId = useId();
 
@@ -267,7 +284,8 @@ function FilePicker({
       <input
         id={inputId}
         type="file"
-        accept={kind.acceptAttr}
+        accept={acceptAttr ?? kind.acceptAttr}
+        capture={capture}
         className="sr-only"
         onChange={(event) => {
           const next = event.target.files?.[0];
@@ -279,9 +297,9 @@ function FilePicker({
       />
       <label
         htmlFor={inputId}
-        className="inline-flex min-h-12 cursor-pointer items-center border border-charcoal/80 px-6 py-3 text-[0.7rem] font-medium uppercase tracking-[0.24em] text-charcoal transition-colors duration-300 hover:bg-charcoal hover:text-ivory"
+        className="flex min-h-14 w-full cursor-pointer items-center justify-center border-2 border-charcoal bg-ivory px-5 py-3 text-center text-base font-medium text-charcoal transition-colors duration-300 hover:bg-charcoal hover:text-ivory"
       >
-        Dosya seç
+        {label}
       </label>
     </div>
   );
@@ -389,12 +407,12 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
 
   return (
     <div className="mt-6">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {recording ? (
           <button
             type="button"
             onClick={stopRecording}
-            className="inline-flex min-h-12 items-center border border-charcoal bg-charcoal px-6 py-3 text-[0.7rem] font-medium uppercase tracking-[0.24em] text-ivory"
+            className="flex min-h-14 w-full items-center justify-center border-2 border-charcoal bg-charcoal px-5 py-3 text-center text-base font-medium text-ivory"
           >
             Kaydı bitir · {formatClock(elapsed)}
           </button>
@@ -402,7 +420,7 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
           <button
             type="button"
             onClick={startRecording}
-            className="inline-flex min-h-12 items-center border border-charcoal/80 px-6 py-3 text-[0.7rem] font-medium uppercase tracking-[0.24em] text-charcoal transition-colors duration-300 hover:bg-charcoal hover:text-ivory"
+            className="flex min-h-14 w-full items-center justify-center border-2 border-charcoal bg-ivory px-5 py-3 text-center text-base font-medium text-charcoal transition-colors duration-300 hover:bg-charcoal hover:text-ivory"
           >
             Kayda başla
           </button>
@@ -410,6 +428,7 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
         <FilePicker
           kind={kind}
           className=""
+          label="Ses dosyası seç"
           onFile={(next) => {
             if (recorderRef.current && recorderRef.current.state !== "inactive") {
               discardRef.current = true;
