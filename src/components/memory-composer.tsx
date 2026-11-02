@@ -1,57 +1,93 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import Link from "next/link";
 import {
   formatFileSize,
   getMemoryKind,
   isMediaKind,
-  isMemoryKindId,
   memoryKinds,
   validateMediaFile,
   type MediaKind,
   type MemoryKindId,
 } from "@/lib/memory-kinds";
+import { buildMemoryDraft, readDeliveryReceipt } from "@/lib/memory-draft";
+
+const PHOTO_LIMIT = 12;
 
 const fieldClass =
   "mt-3 w-full border-b border-charcoal/20 bg-transparent py-3 text-base text-charcoal outline-none transition-colors duration-300 placeholder:text-taupe/50 focus:border-charcoal";
 
+const primaryButton =
+  "flex min-h-14 w-full items-center justify-center bg-charcoal px-6 py-4 text-center font-serif text-2xl text-ivory transition-colors duration-300 hover:bg-taupe focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal disabled:cursor-not-allowed disabled:bg-taupe/40";
+
+const choiceButton =
+  "flex min-h-16 w-full cursor-pointer items-center justify-center border-2 border-charcoal bg-ivory px-5 py-4 text-center font-serif text-2xl text-charcoal transition-colors duration-300 hover:bg-charcoal hover:text-ivory focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal";
+
+type Step = "karsilama" | "tur" | "icerik" | "onay";
+
+type LocalAsset = {
+  id: string;
+  file: File;
+  previewUrl: string;
+};
+
+const stepIndex: Record<Step, number> = {
+  karsilama: 1,
+  tur: 2,
+  icerik: 3,
+  onay: 4,
+};
+
 export function MemoryComposer() {
-  const urlKind = useSyncExternalStore(subscribeToKind, readKindFromLocation, () => null);
-  const [chosenKind, setChosenKind] = useState<MemoryKindId | null | undefined>(undefined);
-  const kindId = chosenKind === undefined ? urlKind : chosenKind;
+  const [step, setStep] = useState<Step>("karsilama");
+  const [kindId, setKindId] = useState<MemoryKindId | null>(null);
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [assets, setAssets] = useState<LocalAsset[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const previewRef = useRef<string | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const firstRender = useRef(true);
+  const assetsRef = useRef(assets);
+
+  useEffect(() => {
+    assetsRef.current = assets;
+  });
 
   useEffect(() => {
     return () => {
-      if (previewRef.current) {
-        URL.revokeObjectURL(previewRef.current);
-      }
+      assetsRef.current.forEach((asset) => URL.revokeObjectURL(asset.previewUrl));
     };
   }, []);
 
   useEffect(() => {
-    if (kindId !== "fotograf" || window.location.hash !== "#fotograf-sec") {
+    if (firstRender.current) {
+      firstRender.current = false;
       return;
     }
-    document.getElementById("fotograf-sec")?.scrollIntoView({ block: "nearest" });
-  }, [kindId]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    headingRef.current?.focus({ preventScroll: true });
+  }, [step]);
 
-  function clearFile() {
-    if (previewRef.current) {
-      URL.revokeObjectURL(previewRef.current);
-      previewRef.current = null;
-    }
-    setPreviewUrl(null);
-    setFile(null);
+  function clearAssets() {
+    setAssets((current) => {
+      current.forEach((asset) => URL.revokeObjectURL(asset.previewUrl));
+      return [];
+    });
   }
 
-  function acceptFile(next: File) {
+  function removeAsset(id: string) {
+    setAssets((current) => {
+      const target = current.find((asset) => asset.id === id);
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return current.filter((asset) => asset.id !== id);
+    });
+    setError(null);
+  }
+
+  function addFiles(files: File[]) {
     if (!kindId) {
       return;
     }
@@ -59,244 +95,474 @@ export function MemoryComposer() {
     if (!isMediaKind(kind)) {
       return;
     }
-    const message = validateMediaFile(next, kind);
-    if (message) {
-      clearFile();
-      setError(message);
+
+    const nextAssets: LocalAsset[] = [];
+    let message: string | null = null;
+    const room = kind.id === "fotograf" ? PHOTO_LIMIT - assets.length : 1;
+
+    if (room <= 0) {
+      setError(`En fazla ${PHOTO_LIMIT} fotoğraf ekleyebilirsin.`);
       return;
     }
-    const url = URL.createObjectURL(next);
-    if (previewRef.current) {
-      URL.revokeObjectURL(previewRef.current);
+
+    for (const file of files.slice(0, room)) {
+      const problem = validateMediaFile(file, kind);
+      if (problem) {
+        message = problem;
+        continue;
+      }
+      nextAssets.push({
+        id: createId(),
+        file,
+        previewUrl: URL.createObjectURL(file),
+      });
     }
-    previewRef.current = url;
-    setPreviewUrl(url);
-    setFile(next);
-    setError(null);
+
+    if (files.length > room && kind.id === "fotograf") {
+      message = `En fazla ${PHOTO_LIMIT} fotoğraf ekleyebilirsin.`;
+    }
+
+    if (nextAssets.length === 0) {
+      setError(message ?? "Bu dosya uygun değil.");
+      return;
+    }
+
+    setAssets((current) => {
+      if (kind.id === "fotograf") {
+        return [...current, ...nextAssets];
+      }
+      current.forEach((asset) => URL.revokeObjectURL(asset.previewUrl));
+      return nextAssets;
+    });
+    setError(message);
   }
 
   function chooseKind(next: MemoryKindId) {
     if (next !== kindId) {
-      clearFile();
-      setError(null);
-      const nextKind = getMemoryKind(next);
-      if (isMediaKind(nextKind) && note.length > 280) {
-        setNote(note.slice(0, 280));
-      }
-      setChosenKind(next);
+      clearAssets();
+      setNote("");
+      setName("");
+      setKindId(next);
     }
-    window.requestAnimationFrame(() => {
-      document.getElementById(next === "fotograf" ? "fotograf-sec" : `ani-${next}`)?.scrollIntoView({
-        block: "nearest",
-        behavior: "smooth",
-      });
-    });
+    setError(null);
+    setStep("icerik");
+  }
+
+  function goToReview() {
+    if (!kindId) {
+      return;
+    }
+    if (kindId === "mesaj" && note.trim().length === 0) {
+      setError("Önce bir mesaj yaz.");
+      return;
+    }
+    if (kindId !== "mesaj" && assets.length === 0) {
+      setError(kindId === "fotograf" ? "Önce bir fotoğraf ekle." : "Önce bir dosya seç.");
+      return;
+    }
+    setError(null);
+    setStep("onay");
+  }
+
+  const delivery = readDeliveryReceipt();
+  if (delivery) {
+    return (
+      <Shell>
+        <ThanksScreen />
+      </Shell>
+    );
   }
 
   const kind = kindId ? getMemoryKind(kindId) : null;
 
   return (
-    <div className="px-5 py-14 md:px-8 md:py-24">
-      <div className="mx-auto max-w-3xl">
-        <p className="text-[0.68rem] uppercase tracking-[0.38em] text-taupe">29 Kasım 2026</p>
-        <h1 className="mt-5 text-balance font-serif text-[2.6rem] leading-[1.02] font-medium tracking-[-0.03em] text-charcoal sm:text-6xl">
-          Bu güzel günden bir anı bırak.
-        </h1>
-        <p className="mt-6 max-w-xl text-pretty text-base leading-7 text-taupe md:text-lg md:leading-8">
-          Fotoğrafın, videon veya birkaç güzel kelimen bizim için çok değerli.
-        </p>
+    <Shell>
+      <p className="text-[0.68rem] uppercase tracking-[0.38em] text-taupe">
+        Adım {stepIndex[step]} / 4
+      </p>
 
-        <fieldset className="mt-12 md:mt-16">
-          <legend className="text-[0.68rem] uppercase tracking-[0.28em] text-taupe">
-            Anı türü
-          </legend>
-          <div className="mt-5 grid grid-cols-1 gap-3">
-            {memoryKinds.map((item) => {
-              const Icon = item.icon;
-              const selected = item.id === kindId;
-              return (
-                <div
-                  key={item.id}
-                  id={`ani-${item.id}`}
-                  className={`scroll-mt-24 border-2 ${selected ? "border-charcoal bg-champagne/35" : "border-transparent"}`}
-                >
-                  <button
-                    type="button"
-                    aria-pressed={selected}
-                    aria-expanded={selected}
-                    aria-controls={selected ? `ani-panel-${item.id}` : undefined}
-                    onClick={() => chooseKind(item.id)}
-                    className={`flex min-h-[4.5rem] w-full items-center gap-4 border-2 px-5 py-4 text-left transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal ${selected ? "border-charcoal bg-charcoal text-ivory" : "border-charcoal/30 bg-champagne/55 text-charcoal"}`}
-                  >
-                    <Icon className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />
-                    <span className="font-serif text-2xl leading-none tracking-tight">{item.action}</span>
-                  </button>
-                  {selected && kind ? (
-                    <div id={`ani-panel-${item.id}`} className="px-4 py-5 md:px-5">
-                      {isMediaKind(kind) ? (
-                        <MediaFields
-                          kind={kind}
-                          file={file}
-                          previewUrl={previewUrl}
-                          error={error}
-                          note={note}
-                          onNote={setNote}
-                          onFile={acceptFile}
-                          onClear={() => {
-                            clearFile();
-                            setError(null);
-                          }}
-                        />
-                      ) : (
-                        <label className="block">
-                          <span className="text-[0.68rem] uppercase tracking-[0.28em] text-taupe">
-                            Mesajın
-                          </span>
-                          <textarea
-                            value={note}
-                            onChange={(event) => setNote(event.target.value)}
-                            maxLength={kind.maxMessage}
-                            rows={7}
-                            className={`${fieldClass} resize-none leading-7`}
-                          />
-                          <span className="mt-3 block text-base text-taupe">
-                            En fazla {kind.maxMessage} karakter · {note.length}/{kind.maxMessage}
-                          </span>
-                        </label>
-                      )}
+      {step === "karsilama" ? (
+        <Welcome headingRef={headingRef} onStart={() => setStep("tur")} />
+      ) : null}
 
-                      <label className="mt-8 block">
-                        <span className="text-[0.68rem] uppercase tracking-[0.28em] text-taupe">
-                          Adın, istersen
-                        </span>
-                        <input
-                          value={name}
-                          onChange={(event) => setName(event.target.value)}
-                          maxLength={40}
-                          autoComplete="name"
-                          className={fieldClass}
-                        />
-                      </label>
+      {step === "tur" ? (
+        <KindStep headingRef={headingRef} onBack={() => setStep("karsilama")} onChoose={chooseKind} />
+      ) : null}
 
-                      <p className="mt-8 border-2 border-charcoal/20 bg-ivory px-5 py-4 text-base leading-7 text-charcoal">
-                        {isMediaKind(kind)
-                          ? "Henüz göndermiyoruz. Seçtiğin dosya şimdilik sadece bu telefonda durur."
-                          : "Henüz göndermiyoruz. Mesajın şimdilik sadece bu telefonda durur."}
-                      </p>
-                      <Link
-                        href="/"
-                        className="mt-6 inline-flex min-h-11 items-center text-base text-taupe underline decoration-charcoal/30 underline-offset-4 transition-colors duration-300 hover:text-charcoal"
-                      >
-                        Albüme dön
-                      </Link>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </fieldset>
-      </div>
+      {step === "icerik" && kind ? (
+        <ContentStep
+          headingRef={headingRef}
+          kindId={kind.id}
+          name={name}
+          note={note}
+          assets={assets}
+          error={error}
+          onName={setName}
+          onNote={setNote}
+          onFiles={addFiles}
+          onRemove={removeAsset}
+          onBack={() => setStep("tur")}
+          onReview={goToReview}
+        />
+      ) : null}
+
+      {step === "onay" && kind ? (
+        <ReviewStep
+          headingRef={headingRef}
+          kindId={kind.id}
+          name={name}
+          note={note}
+          assets={assets}
+          onEdit={() => setStep("icerik")}
+        />
+      ) : null}
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: ReactNode }) {
+  return (
+    <div className="overflow-x-clip px-5 py-14 md:px-8 md:py-24">
+      <div className="mx-auto w-full max-w-2xl">{children}</div>
     </div>
   );
 }
 
-function MediaFields({
-  kind,
-  file,
-  previewUrl,
-  error,
-  note,
-  onNote,
-  onFile,
-  onClear,
+function Welcome({
+  headingRef,
+  onStart,
 }: {
-  kind: MediaKind;
-  file: File | null;
-  previewUrl: string | null;
-  error: string | null;
-  note: string;
-  onNote: (value: string) => void;
-  onFile: (file: File) => void;
-  onClear: () => void;
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  onStart: () => void;
 }) {
   return (
-    <div>
-      {kind.id === "ses" ? (
-        <VoiceCapture kind={kind} onFile={onFile} />
-      ) : kind.id === "fotograf" ? (
-        <div id="fotograf-sec" className="scroll-mt-24 grid grid-cols-1 gap-3">
-          <p className="text-base leading-6 text-charcoal">Kameradan çek ya da galeriden seç.</p>
-          <FilePicker
-            kind={kind}
-            onFile={onFile}
-            label="Fotoğraf çek"
-            capture="environment"
-            acceptAttr="image/*"
-            className=""
-          />
-          <FilePicker kind={kind} onFile={onFile} label="Galeriden seç" className="" />
-        </div>
+    <>
+      <h1
+        ref={headingRef}
+        tabIndex={-1}
+        className="mt-5 text-balance font-serif text-[2.6rem] leading-[1.02] font-medium tracking-[-0.03em] text-charcoal outline-none sm:text-6xl"
+      >
+        Bu güzel günden bir anı bırak.
+      </h1>
+      <span className="mt-8 block h-px w-12 bg-gold" aria-hidden />
+      <p className="mt-8 max-w-xl text-pretty text-base leading-7 text-taupe md:text-lg md:leading-8">
+        Fotoğrafın, videon veya birkaç güzel kelimen bizim için çok değerli.
+      </p>
+      <button type="button" onClick={onStart} className={`${primaryButton} mt-10 sm:max-w-xs`}>
+        Anını paylaş
+      </button>
+      <Link
+        href="/"
+        className="mt-8 inline-flex min-h-11 items-center text-base text-taupe underline decoration-charcoal/30 underline-offset-4"
+      >
+        Albüme dön
+      </Link>
+    </>
+  );
+}
+
+function KindStep({
+  headingRef,
+  onBack,
+  onChoose,
+}: {
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  onBack: () => void;
+  onChoose: (kind: MemoryKindId) => void;
+}) {
+  return (
+    <>
+      <h1
+        ref={headingRef}
+        tabIndex={-1}
+        className="mt-5 text-balance font-serif text-4xl leading-[1.05] font-medium tracking-[-0.03em] text-charcoal outline-none sm:text-5xl"
+      >
+        Nasıl bir anı bırakmak istersin?
+      </h1>
+      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {memoryKinds.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onChoose(item.id)}
+              className="flex min-h-24 items-center gap-4 border border-charcoal/20 bg-champagne/50 px-5 py-4 text-left transition-colors duration-300 hover:border-charcoal hover:bg-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal"
+            >
+              <Icon className="size-5 shrink-0 text-gold" strokeWidth={1.25} aria-hidden />
+              <span>
+                <span className="block font-serif text-3xl leading-none text-charcoal">{item.title}</span>
+                <span className="mt-2 block text-base leading-6 text-taupe">{item.summary}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <BackButton onClick={onBack} />
+    </>
+  );
+}
+
+function ContentStep({
+  headingRef,
+  kindId,
+  name,
+  note,
+  assets,
+  error,
+  onName,
+  onNote,
+  onFiles,
+  onRemove,
+  onBack,
+  onReview,
+}: {
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  kindId: MemoryKindId;
+  name: string;
+  note: string;
+  assets: LocalAsset[];
+  error: string | null;
+  onName: (value: string) => void;
+  onNote: (value: string) => void;
+  onFiles: (files: File[]) => void;
+  onRemove: (id: string) => void;
+  onBack: () => void;
+  onReview: () => void;
+}) {
+  const kind = getMemoryKind(kindId);
+
+  return (
+    <>
+      <h1
+        ref={headingRef}
+        tabIndex={-1}
+        className="mt-5 font-serif text-4xl leading-none font-medium tracking-[-0.03em] text-charcoal outline-none sm:text-5xl"
+      >
+        {kind.title}
+      </h1>
+
+      {isMediaKind(kind) ? (
+        <MediaEntry kind={kind} assets={assets} onFiles={onFiles} onRemove={onRemove} />
       ) : (
-        <FilePicker kind={kind} onFile={onFile} label="Video seç" className="" />
+        <div className="mt-8">
+          <label className="block">
+            <span className="text-base text-charcoal">Adın, istersen</span>
+            <input
+              value={name}
+              onChange={(event) => onName(event.target.value)}
+              maxLength={40}
+              autoComplete="name"
+              className={fieldClass}
+            />
+          </label>
+          <label className="mt-8 block">
+            <span className="text-base text-charcoal">Mesajın</span>
+            <textarea
+              value={note}
+              onChange={(event) => onNote(event.target.value)}
+              maxLength={kind.maxMessage}
+              rows={7}
+              className={`${fieldClass} resize-none leading-7`}
+            />
+            <span className="mt-3 block text-base text-taupe">
+              En fazla {kind.maxMessage} karakter · {note.length}/{kind.maxMessage}
+            </span>
+          </label>
+        </div>
       )}
 
-      <p className="mt-4 text-base leading-6 text-taupe">
-        {kind.typeLabel} kabul edilir. Dosya en fazla {kind.maxLabel} olabilir.
-        {kind.maxSeconds ? ` Ses kaydı en fazla ${kind.maxSeconds / 60} dakika.` : ""}
-      </p>
+      {error ? <p className="mt-4 text-base leading-6 text-charcoal">{error}</p> : null}
 
-      {error ? <p className="mt-4 text-sm leading-6 text-charcoal">{error}</p> : null}
+      <button type="button" onClick={onReview} className={`${primaryButton} mt-8`}>
+        Kontrol et
+      </button>
+      <BackButton onClick={onBack} />
+    </>
+  );
+}
 
-      {file && previewUrl ? (
-        <div className="mt-6">
-          <MediaPreview kind={kind} file={file} previewUrl={previewUrl} />
-          <div className="mt-4 flex items-center justify-between gap-4">
-            <p className="min-w-0 truncate text-sm text-taupe">
-              {file.name} · {formatFileSize(file.size)}
-            </p>
-            <button
-              type="button"
-              onClick={onClear}
-              className="shrink-0 text-[0.68rem] uppercase tracking-[0.22em] text-charcoal"
-            >
-              Kaldır
-            </button>
-          </div>
+function MediaEntry({
+  kind,
+  assets,
+  onFiles,
+  onRemove,
+}: {
+  kind: MediaKind;
+  assets: LocalAsset[];
+  onFiles: (files: File[]) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div className="mt-8">
+      <p className="text-base leading-7 text-taupe">{mediaHelp(kind)}</p>
+
+      {kind.id === "fotograf" ? (
+        <div className="mt-6 grid grid-cols-1 gap-3">
+          <FilePicker kind={kind} label="Fotoğraf çek" capture="environment" acceptAttr="image/*" onFiles={onFiles} />
+          <FilePicker kind={kind} label="Galeriden seç" multiple onFiles={onFiles} />
         </div>
       ) : null}
 
-      <label className="mt-10 block">
-        <span className="text-[0.68rem] uppercase tracking-[0.28em] text-taupe">
-          {kind.noteLabel}
-        </span>
-        <textarea
-          value={note}
-          onChange={(event) => onNote(event.target.value)}
-          maxLength={280}
-          rows={4}
-          className={`${fieldClass} resize-none leading-7`}
-        />
-        <span className="mt-3 block text-sm text-taupe">En fazla 280 karakter · {note.length}/280</span>
-      </label>
+      {kind.id === "video" ? (
+        <FilePicker kind={kind} label="Video seç" className="mt-6" onFiles={onFiles} />
+      ) : null}
+
+      {kind.id === "ses" ? <VoiceCapture kind={kind} onFile={(file) => onFiles([file])} /> : null}
+
+      {assets.length > 0 ? (
+        <ul className="mt-6 grid grid-cols-1 gap-4">
+          {assets.map((asset) => (
+            <li key={asset.id} className="min-w-0">
+              <Preview kind={kind} asset={asset} />
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="min-w-0 truncate text-base text-taupe">
+                  {asset.file.name} · {formatFileSize(asset.file.size)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onRemove(asset.id)}
+                  className="inline-flex min-h-11 shrink-0 items-center text-base text-charcoal underline decoration-charcoal/30 underline-offset-4"
+                >
+                  Kaldır
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
+  );
+}
+
+function ReviewStep({
+  headingRef,
+  kindId,
+  name,
+  note,
+  assets,
+  onEdit,
+}: {
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  kindId: MemoryKindId;
+  name: string;
+  note: string;
+  assets: LocalAsset[];
+  onEdit: () => void;
+}) {
+  const kind = getMemoryKind(kindId);
+  const draft = buildMemoryDraft({
+    kind: kindId,
+    guestName: name,
+    message: kindId === "mesaj" ? note : "",
+    files: assets.map((asset) => ({ id: asset.id, file: asset.file })),
+  });
+
+  return (
+    <>
+      <h1
+        ref={headingRef}
+        tabIndex={-1}
+        className="mt-5 text-balance font-serif text-4xl leading-[1.05] font-medium tracking-[-0.03em] text-charcoal outline-none sm:text-5xl"
+      >
+        Anını bir kez daha gör.
+      </h1>
+      <p className="mt-6 text-base leading-7 text-taupe">
+        {kind.title}
+        {draft.guestName ? ` · ${draft.guestName}` : ""}
+      </p>
+
+      {kindId === "mesaj" ? (
+        <blockquote className="mt-8 border-l border-gold pl-5 font-serif text-2xl leading-snug text-charcoal">
+          {draft.message}
+        </blockquote>
+      ) : isMediaKind(kind) ? (
+        <ul className="mt-8 grid grid-cols-1 gap-4">
+          {assets.map((asset) => {
+            const original = draft.originals.find((item) => item.localId === asset.id);
+            return (
+              <li key={asset.id} className="min-w-0">
+                <Preview kind={kind} asset={asset} />
+                <p className="mt-3 truncate text-base text-taupe">
+                  {original?.fileName} · {original ? formatFileSize(original.byteSize) : ""}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+
+      <p className="mt-8 border border-charcoal/15 bg-champagne/40 px-5 py-4 text-base leading-7 text-charcoal">
+        {kindId === "mesaj"
+          ? "Gönderim henüz açık değil. Mesajın albüme eklenmedi; şimdilik yalnızca bu telefonda duruyor."
+          : "Gönderim henüz açık değil. Anın albüme eklenmedi; dosyalar yalnızca bu telefonda duruyor."}
+      </p>
+      <button type="button" disabled className={`${primaryButton} mt-6`}>
+        Gönder
+      </button>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="mt-3 flex min-h-14 w-full items-center justify-center border border-charcoal/30 px-6 py-4 text-center font-serif text-2xl text-charcoal"
+      >
+        Düzenle
+      </button>
+      <Link
+        href="/"
+        className="mt-6 inline-flex min-h-11 items-center text-base text-taupe underline decoration-charcoal/30 underline-offset-4"
+      >
+        Albüme dön
+      </Link>
+    </>
+  );
+}
+
+function ThanksScreen() {
+  return (
+    <>
+      <p className="text-[0.68rem] uppercase tracking-[0.38em] text-taupe">Teşekkürler</p>
+      <h1 className="mt-5 text-balance font-serif text-[2.6rem] leading-[1.02] font-medium tracking-[-0.03em] text-charcoal sm:text-6xl">
+        Anını bizimle paylaştığın için teşekkür ederiz.
+      </h1>
+      <span className="mt-8 block h-px w-12 bg-gold" aria-hidden />
+      <p className="mt-8 max-w-xl text-pretty text-base leading-7 text-taupe md:text-lg">
+        Bu özel günümüzü daha da anlamlı kıldın.
+      </p>
+      <Link href="/" className={`${primaryButton} mt-10 sm:max-w-xs`}>
+        Albüme dön
+      </Link>
+    </>
+  );
+}
+
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-4 inline-flex min-h-11 items-center text-base text-taupe underline decoration-charcoal/30 underline-offset-4"
+    >
+      Geri
+    </button>
   );
 }
 
 function FilePicker({
   kind,
-  onFile,
-  className = "mt-6",
-  label = "Dosya seç",
+  onFiles,
+  className = "",
+  label,
   capture,
   acceptAttr,
+  multiple = false,
 }: {
   kind: MediaKind;
-  onFile: (file: File) => void;
+  onFiles: (files: File[]) => void;
   className?: string;
-  label?: string;
-  capture?: "user" | "environment";
+  label: string;
+  capture?: "environment";
   acceptAttr?: string;
+  multiple?: boolean;
 }) {
   const inputId = useId();
 
@@ -307,22 +573,68 @@ function FilePicker({
         type="file"
         accept={acceptAttr ?? kind.acceptAttr}
         capture={capture}
+        multiple={multiple}
         className="sr-only"
         onChange={(event) => {
-          const next = event.target.files?.[0];
+          const files = event.target.files ? Array.from(event.target.files) : [];
           event.target.value = "";
-          if (next) {
-            onFile(next);
+          if (files.length > 0) {
+            onFiles(files);
           }
         }}
       />
-      <label
-        htmlFor={inputId}
-        className="flex min-h-16 w-full cursor-pointer items-center justify-center border-2 border-charcoal bg-charcoal px-5 py-4 text-center font-serif text-2xl text-ivory transition-colors duration-300 hover:bg-ivory hover:text-charcoal"
-      >
+      <label htmlFor={inputId} className={choiceButton}>
         {label}
       </label>
     </div>
+  );
+}
+
+function Preview({ kind, asset }: { kind: MediaKind; asset: LocalAsset }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <p className="border border-charcoal/15 bg-champagne/40 px-5 py-6 text-base leading-7 text-taupe">
+        Önizleme bu telefonda açılamadı. Dosyan duruyor: {asset.file.name}
+      </p>
+    );
+  }
+
+  if (kind.id === "fotograf") {
+    return (
+      // Local object URLs are previews only. The original File is not rewritten.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={asset.previewUrl}
+        alt="Seçilen fotoğrafın önizlemesi"
+        className="max-h-[70svh] w-full bg-champagne object-contain"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  if (kind.id === "video") {
+    return (
+      <video
+        src={asset.previewUrl}
+        controls
+        playsInline
+        preload="metadata"
+        className="max-h-[70svh] w-full bg-charcoal"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <audio
+      src={asset.previewUrl}
+      controls
+      preload="metadata"
+      className="w-full"
+      onError={() => setFailed(true)}
+    />
   );
 }
 
@@ -379,9 +691,7 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
       const mimeType = candidates.find((type) => MediaRecorder.isTypeSupported(type));
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType })
-        : new MediaRecorder(stream);
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       chunksRef.current = [];
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -393,9 +703,7 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
         const shouldSave = !discardRef.current;
         discardRef.current = false;
         if (shouldSave) {
-          const blob = new Blob(chunksRef.current, {
-            type: recorder.mimeType || "audio/webm",
-          });
+          const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
           const extension = blob.type.includes("mp4") ? "m4a" : "webm";
           onFile(new File([blob], `ses-kaydi.${extension}`, { type: blob.type || "audio/webm" }));
         }
@@ -410,10 +718,7 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
       setElapsed(0);
       const startedAt = Date.now();
       timerRef.current = window.setInterval(() => {
-        const seconds = Math.min(
-          kind.maxSeconds ?? 120,
-          Math.floor((Date.now() - startedAt) / 1000),
-        );
+        const seconds = Math.min(kind.maxSeconds ?? 120, Math.floor((Date.now() - startedAt) / 1000));
         setElapsed(seconds);
         if (kind.maxSeconds && seconds >= kind.maxSeconds) {
           stopRecording();
@@ -427,101 +732,53 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
   }
 
   return (
-    <div className="mt-6">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {recording ? (
-          <button
-            type="button"
-            onClick={stopRecording}
-            className="flex min-h-14 w-full items-center justify-center border-2 border-charcoal bg-charcoal px-5 py-3 text-center text-base font-medium text-ivory"
-          >
-            Kaydı bitir · {formatClock(elapsed)}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={startRecording}
-            className="flex min-h-14 w-full items-center justify-center border-2 border-charcoal bg-ivory px-5 py-3 text-center text-base font-medium text-charcoal transition-colors duration-300 hover:bg-charcoal hover:text-ivory"
-          >
-            Kayda başla
-          </button>
-        )}
-        <FilePicker
-          kind={kind}
-          className=""
-          label="Ses dosyası seç"
-          onFile={(next) => {
-            if (recorderRef.current && recorderRef.current.state !== "inactive") {
-              discardRef.current = true;
-              stopRecording();
-            }
-            setRecording(false);
-            onFile(next);
-          }}
-        />
-      </div>
-      {localError ? <p className="mt-4 text-sm leading-6 text-charcoal">{localError}</p> : null}
+    <div className="mt-6 grid grid-cols-1 gap-3">
+      {recording ? (
+        <button type="button" onClick={stopRecording} className={primaryButton}>
+          Kaydı bitir · {formatClock(elapsed)}
+        </button>
+      ) : (
+        <button type="button" onClick={startRecording} className={choiceButton}>
+          Kayda başla
+        </button>
+      )}
+      <FilePicker
+        kind={kind}
+        label="Ses dosyası seç"
+        onFiles={(files) => {
+          const next = files[0];
+          if (!next) {
+            return;
+          }
+          if (recorderRef.current && recorderRef.current.state !== "inactive") {
+            discardRef.current = true;
+            stopRecording();
+          }
+          setRecording(false);
+          onFile(next);
+        }}
+      />
+      {localError ? <p className="text-base leading-6 text-charcoal">{localError}</p> : null}
     </div>
   );
 }
 
-function MediaPreview({
-  kind,
-  file,
-  previewUrl,
-}: {
-  kind: MediaKind;
-  file: File;
-  previewUrl: string;
-}) {
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <p className="text-sm leading-6 text-taupe">
-        Önizleme bu tarayıcıda açılamadı. Seçilen dosya: {file.name}
-      </p>
-    );
-  }
-
+function mediaHelp(kind: MediaKind): string {
   if (kind.id === "fotograf") {
-    return (
-      // Blob previews are local and temporary; the image optimizer cannot fetch them.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={previewUrl}
-        alt="Seçilen fotoğrafın önizlemesi"
-        className="max-h-[70svh] w-full bg-champagne object-contain"
-        onError={() => setFailed(true)}
-      />
-    );
+    return `${kind.typeLabel} kabul edilir. Her fotoğraf en fazla ${kind.maxLabel}. Birden fazla fotoğraf seçebilirsin, en fazla ${PHOTO_LIMIT}.`;
   }
-
   if (kind.id === "video") {
-    return (
-      <video
-        src={previewUrl}
-        controls
-        playsInline
-        preload="metadata"
-        className="max-h-[70svh] w-full bg-charcoal"
-        onError={() => setFailed(true)}
-      />
-    );
+    return `${kind.typeLabel} kabul edilir. Video en fazla ${kind.maxLabel} olabilir.`;
   }
-
-  return (
-    <audio src={previewUrl} controls preload="metadata" className="w-full" onError={() => setFailed(true)} />
-  );
+  const minutes = (kind.maxSeconds ?? 120) / 60;
+  return `${kind.typeLabel} kabul edilir. Dosya en fazla ${kind.maxLabel}. Ses kaydı en fazla ${minutes} dakika.`;
 }
 
-function subscribeToKind() {
-  return () => {};
-}
-
-function readKindFromLocation(): MemoryKindId | null {
-  const value = new URLSearchParams(window.location.search).get("tur") ?? undefined;
-  return isMemoryKindId(value) ? value : null;
+function createId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `ani-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function formatClock(totalSeconds: number): string {

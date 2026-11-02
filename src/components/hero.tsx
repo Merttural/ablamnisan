@@ -44,11 +44,12 @@ export function Hero() {
           className="rise mt-8 max-w-md text-pretty text-base leading-7 text-taupe md:text-lg md:leading-8"
           style={{ animationDelay: "400ms" }}
         >
-          Bu akşamın ışığını, sofrasını ve sessiz anlarını bir albümde
-          topluyoruz. Bıraktığınız her kare, bu günün bir sayfası olacak.
+          En güzel anılar, sevdiklerimizle paylaştıklarımızdır.
         </p>
         <div className="rise mt-10" style={{ animationDelay: "520ms" }}>
-          <TextLink href="/ani-birak">Bir Anı Bırak</TextLink>
+          <TextLink href="/ani-birak" variant="solid">
+            Bir Anı Bırak
+          </TextLink>
         </div>
       </div>
     </section>

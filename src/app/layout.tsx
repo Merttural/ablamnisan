@@ -16,11 +16,13 @@ const inter = Inter({
   display: "swap",
 });
 
+const siteUrl = "https://ablamnisan.vercel.app";
 const title = "Alkan & Gamze — 29 Kasım 2026";
 const description =
-  "Alkan ve Gamze’nin nişanına özel dijital anı albümü. 29 Kasım 2026 gününün karelerini birlikte biriktiriyoruz.";
+  "Alkan ve Gamze’nin nişanına özel dijital anı albümü. 29 Kasım 2026 gününden bir fotoğraf, video veya mesaj bırakın.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: title,
     template: "%s — Alkan & Gamze",
@@ -28,17 +30,30 @@ export const metadata: Metadata = {
   description,
   applicationName: "Alkan & Gamze",
   authors: [{ name: "Alkan & Gamze" }],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title,
     description,
     locale: "tr_TR",
     type: "website",
     siteName: "Alkan & Gamze",
+    url: siteUrl,
+    images: [
+      {
+        url: "/images/hero.jpg",
+        width: 1280,
+        height: 720,
+        alt: "Alkan ve Gamze’nin nişan sofrası, 29 Kasım 2026",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
+    images: ["/images/hero.jpg"],
   },
   robots: {
     index: true,

@@ -126,6 +126,9 @@ export function fileMatchesKind(file: File, kind: MediaKind): boolean {
 }
 
 export function validateMediaFile(file: File, kind: MediaKind): string | null {
+  if (file.size <= 0) {
+    return "Bu dosya boş.";
+  }
   if (!fileMatchesKind(file, kind)) {
     return `Bu dosya uygun değil. ${kind.typeLabel} kullanabilirsin.`;
   }
@@ -136,8 +139,8 @@ export function validateMediaFile(file: File, kind: MediaKind): string | null {
 }
 
 export const howItWorksSteps = [
-  "QR kodu okut.",
-  "Anı türünü seç.",
-  "Fotoğrafını, videonu veya mesajını gönder.",
-  "Anın Alkan ve Gamze'nin özel albümüne eklensin.",
+  "QR kodu telefonunuzla okutun.",
+  "Bırakmak istediğiniz anıyı seçin.",
+  "Fotoğrafınızı, videonuzu veya mesajınızı gönderin.",
+  "Anınız Alkan ve Gamze'nin özel albümünde saklansın.",
 ] as const;

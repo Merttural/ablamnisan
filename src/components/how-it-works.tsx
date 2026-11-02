@@ -15,12 +15,14 @@ export function HowItWorks() {
           {howItWorksSteps.map((step, index) => (
             <li
               key={step}
-              className="flex items-center gap-4 border-2 border-charcoal/25 bg-champagne/45 p-4 md:flex-col md:items-start md:p-6"
+              className="flex items-start gap-4 border-2 border-charcoal/25 bg-champagne/45 p-4 md:flex-col md:p-6"
             >
               <span className="grid size-12 shrink-0 place-items-center bg-charcoal font-serif text-2xl text-ivory">
                 {index + 1}
               </span>
-              <p className="text-pretty font-serif text-2xl leading-snug text-charcoal">{step}</p>
+              <p className="text-pretty font-serif text-2xl leading-snug text-charcoal md:text-[1.65rem]">
+                {step}
+              </p>
             </li>
           ))}
         </ol>

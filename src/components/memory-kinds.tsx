@@ -16,19 +16,21 @@ export function MemoryKinds() {
             return (
               <li key={kind.id}>
                 <Link
-                  href={kind.id === "fotograf" ? "/ani-birak?tur=fotograf#fotograf-sec" : `/ani-birak?tur=${kind.id}`}
-                  className="group flex h-full flex-col border-2 border-charcoal/30 bg-champagne/55 p-6 transition-colors duration-300 hover:border-charcoal hover:bg-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal md:p-8"
+                  href="/ani-birak"
+                  className="group flex h-full flex-col border border-charcoal/20 bg-champagne/45 p-6 transition-colors duration-300 hover:border-charcoal hover:bg-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal md:p-8"
                 >
-                  <span className="grid size-12 place-items-center border border-charcoal/20 bg-ivory text-charcoal">
-                    <Icon className="size-6" strokeWidth={1.5} aria-hidden />
-                  </span>
-                  <h3 className="mt-6 font-serif text-4xl font-medium tracking-tight text-charcoal">
+                  <Icon className="size-5 text-gold" strokeWidth={1.25} aria-hidden />
+                  <h3 className="mt-5 font-serif text-4xl font-medium tracking-tight text-charcoal">
                     {kind.title}
                   </h3>
                   <p className="mt-3 text-lg leading-7 text-charcoal/80">{kind.summary}</p>
-                  <span className="mt-8 inline-flex min-h-12 items-center justify-between gap-3 bg-charcoal px-4 py-3 text-base text-ivory">
+                  <span className="mt-8 inline-flex min-h-12 items-center gap-2 text-base text-charcoal">
                     {kind.action}
-                    <ArrowUpRight className="size-5 shrink-0" strokeWidth={1.5} aria-hidden />
+                    <ArrowUpRight
+                      className="size-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                      strokeWidth={1.25}
+                      aria-hidden
+                    />
                   </span>
                 </Link>
               </li>
