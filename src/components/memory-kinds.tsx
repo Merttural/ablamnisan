@@ -16,7 +16,7 @@ export function MemoryKinds() {
             return (
               <li key={kind.id}>
                 <Link
-                  href={`/ani-birak?tur=${kind.id}`}
+                  href={kind.id === "fotograf" ? "/ani-birak?tur=fotograf#fotograf-sec" : `/ani-birak?tur=${kind.id}`}
                   className="group flex h-full flex-col border-2 border-charcoal/30 bg-champagne/55 p-6 transition-colors duration-300 hover:border-charcoal hover:bg-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal md:p-8"
                 >
                   <span className="grid size-12 place-items-center border border-charcoal/20 bg-ivory text-charcoal">

@@ -35,6 +35,13 @@ export function MemoryComposer() {
     };
   }, []);
 
+  useEffect(() => {
+    if (kindId !== "fotograf" || window.location.hash !== "#fotograf-sec") {
+      return;
+    }
+    document.getElementById("fotograf-sec")?.scrollIntoView({ block: "nearest" });
+  }, [kindId]);
+
   function clearFile() {
     if (previewRef.current) {
       URL.revokeObjectURL(previewRef.current);
@@ -69,16 +76,21 @@ export function MemoryComposer() {
   }
 
   function chooseKind(next: MemoryKindId) {
-    if (next === kindId) {
-      return;
+    if (next !== kindId) {
+      clearFile();
+      setError(null);
+      const nextKind = getMemoryKind(next);
+      if (isMediaKind(nextKind) && note.length > 280) {
+        setNote(note.slice(0, 280));
+      }
+      setChosenKind(next);
     }
-    clearFile();
-    setError(null);
-    const nextKind = getMemoryKind(next);
-    if (isMediaKind(nextKind) && note.length > 280) {
-      setNote(note.slice(0, 280));
-    }
-    setChosenKind(next);
+    window.requestAnimationFrame(() => {
+      document.getElementById(next === "fotograf" ? "fotograf-sec" : `ani-${next}`)?.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    });
   }
 
   const kind = kindId ? getMemoryKind(kindId) : null;
@@ -98,84 +110,92 @@ export function MemoryComposer() {
           <legend className="text-[0.68rem] uppercase tracking-[0.28em] text-taupe">
             Anı türü
           </legend>
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mt-5 grid grid-cols-1 gap-3">
             {memoryKinds.map((item) => {
               const Icon = item.icon;
               const selected = item.id === kindId;
               return (
-                <button
+                <div
                   key={item.id}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => chooseKind(item.id)}
-                  className={`flex min-h-[4.5rem] items-center gap-4 border-2 px-5 py-4 text-left transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal ${selected ? "border-charcoal bg-charcoal text-ivory" : "border-charcoal/30 bg-champagne/55 text-charcoal"}`}
+                  id={`ani-${item.id}`}
+                  className={`scroll-mt-24 border-2 ${selected ? "border-charcoal bg-champagne/35" : "border-transparent"}`}
                 >
-                  <Icon className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />
-                  <span className="font-serif text-2xl leading-none tracking-tight">{item.action}</span>
-                </button>
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    aria-expanded={selected}
+                    aria-controls={selected ? `ani-panel-${item.id}` : undefined}
+                    onClick={() => chooseKind(item.id)}
+                    className={`flex min-h-[4.5rem] w-full items-center gap-4 border-2 px-5 py-4 text-left transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal ${selected ? "border-charcoal bg-charcoal text-ivory" : "border-charcoal/30 bg-champagne/55 text-charcoal"}`}
+                  >
+                    <Icon className="size-6 shrink-0" strokeWidth={1.5} aria-hidden />
+                    <span className="font-serif text-2xl leading-none tracking-tight">{item.action}</span>
+                  </button>
+                  {selected && kind ? (
+                    <div id={`ani-panel-${item.id}`} className="px-4 py-5 md:px-5">
+                      {isMediaKind(kind) ? (
+                        <MediaFields
+                          kind={kind}
+                          file={file}
+                          previewUrl={previewUrl}
+                          error={error}
+                          note={note}
+                          onNote={setNote}
+                          onFile={acceptFile}
+                          onClear={() => {
+                            clearFile();
+                            setError(null);
+                          }}
+                        />
+                      ) : (
+                        <label className="block">
+                          <span className="text-[0.68rem] uppercase tracking-[0.28em] text-taupe">
+                            Mesajın
+                          </span>
+                          <textarea
+                            value={note}
+                            onChange={(event) => setNote(event.target.value)}
+                            maxLength={kind.maxMessage}
+                            rows={7}
+                            className={`${fieldClass} resize-none leading-7`}
+                          />
+                          <span className="mt-3 block text-base text-taupe">
+                            En fazla {kind.maxMessage} karakter · {note.length}/{kind.maxMessage}
+                          </span>
+                        </label>
+                      )}
+
+                      <label className="mt-8 block">
+                        <span className="text-[0.68rem] uppercase tracking-[0.28em] text-taupe">
+                          Adın, istersen
+                        </span>
+                        <input
+                          value={name}
+                          onChange={(event) => setName(event.target.value)}
+                          maxLength={40}
+                          autoComplete="name"
+                          className={fieldClass}
+                        />
+                      </label>
+
+                      <p className="mt-8 border-2 border-charcoal/20 bg-ivory px-5 py-4 text-base leading-7 text-charcoal">
+                        {isMediaKind(kind)
+                          ? "Henüz göndermiyoruz. Seçtiğin dosya şimdilik sadece bu telefonda durur."
+                          : "Henüz göndermiyoruz. Mesajın şimdilik sadece bu telefonda durur."}
+                      </p>
+                      <Link
+                        href="/"
+                        className="mt-6 inline-flex min-h-11 items-center text-base text-taupe underline decoration-charcoal/30 underline-offset-4 transition-colors duration-300 hover:text-charcoal"
+                      >
+                        Albüme dön
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </div>
         </fieldset>
-
-        {kind ? (
-          <div className="mt-12 border-t border-charcoal/10 pt-10">
-            <label className="block">
-              <span className="text-[0.68rem] uppercase tracking-[0.28em] text-taupe">
-                Adın, istersen
-              </span>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={40}
-                autoComplete="name"
-                className={fieldClass}
-              />
-            </label>
-
-            {isMediaKind(kind) ? (
-              <MediaFields
-                kind={kind}
-                file={file}
-                previewUrl={previewUrl}
-                error={error}
-                note={note}
-                onNote={setNote}
-                onFile={acceptFile}
-                onClear={() => {
-                  clearFile();
-                  setError(null);
-                }}
-              />
-            ) : (
-              <label className="mt-10 block">
-                <span className="text-[0.68rem] uppercase tracking-[0.28em] text-taupe">
-                  Mesajın
-                </span>
-                <textarea
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                  maxLength={kind.maxMessage}
-                  rows={7}
-                  className={`${fieldClass} resize-none leading-7`}
-                />
-                <span className="mt-3 block text-sm text-taupe">
-                  En fazla {kind.maxMessage} karakter · {note.length}/{kind.maxMessage}
-                </span>
-              </label>
-            )}
-
-            <p className="mt-10 border-2 border-charcoal/20 bg-champagne/40 px-5 py-4 text-base leading-7 text-charcoal">
-              Henüz göndermiyoruz. Seçtiğin dosya şimdilik sadece bu telefonda durur.
-            </p>
-            <Link
-              href="/"
-              className="mt-8 inline-flex text-[0.68rem] uppercase tracking-[0.28em] text-taupe transition-colors duration-300 hover:text-charcoal"
-            >
-              Albüme dön
-            </Link>
-          </div>
-        ) : null}
       </div>
     </div>
   );
@@ -201,16 +221,12 @@ function MediaFields({
   onClear: () => void;
 }) {
   return (
-    <div className="mt-10">
-      <p className="text-sm leading-6 text-taupe">
-        {kind.typeLabel} kabul edilir. Dosya en fazla {kind.maxLabel} olabilir.
-        {kind.maxSeconds ? ` Ses kaydı en fazla ${kind.maxSeconds / 60} dakika.` : ""}
-      </p>
-
+    <div>
       {kind.id === "ses" ? (
         <VoiceCapture kind={kind} onFile={onFile} />
       ) : kind.id === "fotograf" ? (
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div id="fotograf-sec" className="scroll-mt-24 grid grid-cols-1 gap-3">
+          <p className="text-base leading-6 text-charcoal">Kameradan çek ya da galeriden seç.</p>
           <FilePicker
             kind={kind}
             onFile={onFile}
@@ -222,8 +238,13 @@ function MediaFields({
           <FilePicker kind={kind} onFile={onFile} label="Galeriden seç" className="" />
         </div>
       ) : (
-        <FilePicker kind={kind} onFile={onFile} label="Video seç" />
+        <FilePicker kind={kind} onFile={onFile} label="Video seç" className="" />
       )}
+
+      <p className="mt-4 text-base leading-6 text-taupe">
+        {kind.typeLabel} kabul edilir. Dosya en fazla {kind.maxLabel} olabilir.
+        {kind.maxSeconds ? ` Ses kaydı en fazla ${kind.maxSeconds / 60} dakika.` : ""}
+      </p>
 
       {error ? <p className="mt-4 text-sm leading-6 text-charcoal">{error}</p> : null}
 
@@ -297,7 +318,7 @@ function FilePicker({
       />
       <label
         htmlFor={inputId}
-        className="flex min-h-14 w-full cursor-pointer items-center justify-center border-2 border-charcoal bg-ivory px-5 py-3 text-center text-base font-medium text-charcoal transition-colors duration-300 hover:bg-charcoal hover:text-ivory"
+        className="flex min-h-16 w-full cursor-pointer items-center justify-center border-2 border-charcoal bg-charcoal px-5 py-4 text-center font-serif text-2xl text-ivory transition-colors duration-300 hover:bg-ivory hover:text-charcoal"
       >
         {label}
       </label>
