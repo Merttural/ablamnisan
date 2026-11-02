@@ -2,10 +2,12 @@
 
 import { useEffect, useId, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 
 const NAV = [
   { href: "/#anilar", label: "Anılar" },
+  { href: "/#nasil-calisir", label: "Nasıl" },
   { href: "/#gun", label: "Davet" },
   { href: "/ani-birak", label: "Anı Bırak" },
 ] as const;
@@ -13,6 +15,7 @@ const NAV = [
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const menuId = useId();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!open) {
@@ -54,11 +57,12 @@ export function SiteHeader() {
 
           <nav className="hidden items-center gap-9 md:flex" aria-label="Sayfa">
             {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="relative text-[0.68rem] uppercase tracking-[0.28em] text-taupe transition-colors duration-300 after:absolute after:inset-x-0 after:-bottom-1.5 after:h-px after:origin-left after:scale-x-0 after:bg-gold after:transition-transform after:duration-500 hover:text-charcoal hover:after:scale-x-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-charcoal motion-reduce:after:transition-none"
-              >
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={pathname === item.href ? "page" : undefined}
+              className={`relative text-[0.68rem] uppercase tracking-[0.28em] transition-colors duration-300 after:absolute after:inset-x-0 after:-bottom-1.5 after:h-px after:origin-left after:bg-gold after:transition-transform after:duration-500 hover:text-charcoal hover:after:scale-x-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-charcoal motion-reduce:after:transition-none ${pathname === item.href ? "text-charcoal after:scale-x-100" : "text-taupe after:scale-x-0"}`}
+            >
                 {item.label}
               </Link>
             ))}

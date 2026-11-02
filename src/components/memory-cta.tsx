@@ -16,7 +16,7 @@ export function MemoryCta() {
         </p>
         <div className="mt-10">
           <TextLink href="/ani-birak" variant="solid">
-            Anını Bırak
+            Bir Anı Bırak
           </TextLink>
         </div>
       </div>
