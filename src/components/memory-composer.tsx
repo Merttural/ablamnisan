@@ -400,7 +400,13 @@ function MediaEntry({
       {kind.id === "fotograf" ? (
         <div className="mt-6 grid grid-cols-1 gap-3">
           <FilePicker kind={kind} label="Fotoğraf çek" capture="environment" acceptAttr="image/*" onFiles={onFiles} />
-          <FilePicker kind={kind} label="Galeriden seç" multiple onFiles={onFiles} />
+          <FilePicker kind={kind} label="Galeriden seç" onFiles={onFiles} />
+          <FilePicker kind={kind} label="Toplu yükle" multiple onFiles={onFiles} />
+          <p className="text-base leading-6 text-taupe">
+            {assets.length > 0
+              ? `${assets.length} fotoğraf seçildi. Toplu yükle ile en fazla ${PHOTO_LIMIT} fotoğraf ekleyebilirsin.`
+              : `Toplu yükle ile bir kerede birden fazla fotoğraf seçebilirsin. En fazla ${PHOTO_LIMIT}.`}
+          </p>
         </div>
       ) : null}
 
@@ -411,7 +417,7 @@ function MediaEntry({
       {kind.id === "ses" ? <VoiceCapture kind={kind} onFile={(file) => onFiles([file])} /> : null}
 
       {assets.length > 0 ? (
-        <ul className="mt-6 grid grid-cols-1 gap-4">
+        <ul className={`mt-6 grid gap-4 ${kind.id === "fotograf" ? "grid-cols-2" : "grid-cols-1"}`}>
           {assets.map((asset) => (
             <li key={asset.id} className="min-w-0">
               <Preview kind={kind} asset={asset} />
@@ -765,7 +771,7 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
 
 function mediaHelp(kind: MediaKind): string {
   if (kind.id === "fotograf") {
-    return `${kind.typeLabel} kabul edilir. Her fotoğraf en fazla ${kind.maxLabel}. Birden fazla fotoğraf seçebilirsin, en fazla ${PHOTO_LIMIT}.`;
+    return `${kind.typeLabel} kabul edilir. Her fotoğraf en fazla ${kind.maxLabel}.`;
   }
   if (kind.id === "video") {
     return `${kind.typeLabel} kabul edilir. Video en fazla ${kind.maxLabel} olabilir.`;
