@@ -7,6 +7,7 @@ import {
   getMemoryKind,
   isMediaKind,
   memoryKinds,
+  sampleMessages,
   validateMediaFile,
   type MediaKind,
   type MemoryKindId,
@@ -314,7 +315,25 @@ function ContentStep({
         <MediaEntry kind={kind} assets={assets} onFiles={onFiles} onRemove={onRemove} />
       ) : (
         <div className="mt-8">
-          <label className="block">
+          <p className="text-base text-charcoal">Bir örnek seç veya kendin yaz.</p>
+          <ul className="mt-3 grid gap-2">
+            {sampleMessages.map((sample) => {
+              const selected = note === sample;
+              return (
+                <li key={sample}>
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => onNote(sample)}
+                    className={`w-full border px-4 py-4 text-left text-base leading-7 transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal ${selected ? "border-charcoal bg-charcoal text-ivory" : "border-charcoal/20 bg-champagne/50 text-charcoal"}`}
+                  >
+                    {sample}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <label className="mt-8 block">
             <span className="text-base text-charcoal">Mesajın</span>
             <textarea
               value={note}

@@ -138,6 +138,19 @@ export function validateMediaFile(file: File, kind: MediaKind): string | null {
   return null;
 }
 
+export const sampleMessages = [
+  "Alkan ve Gamze, bu güzel gününüzde yanınızda olmak çok güzel. Bir ömür boyu mutluluklar.",
+  "Sevginiz bize de iyi geldi. Nice mutlu yıllara.",
+  "Bugün çok güzelsiniz. Yolunuz açık, eviniz bereketli olsun.",
+  "Sizi böyle mutlu görmek yetti bize. Ömrünüz bir olsun.",
+  "Kalbiniz hiç eksilmesin. Tebrikler, sizi seviyoruz.",
+  "Bu akşamın neşesi yıllar sonra da sürsün.",
+  "Birlikte çok güzelsiniz. Yeni başlangıcınız kutlu olsun.",
+  "Gözlerinizdeki sevinç bugünün en güzel hali. Mutluluklar.",
+  "İyi ki varsınız. Bu özel gününüzde sizi sevgiyle anıyoruz.",
+  "El ele, gönül gönüle. Nice bayramlara, nice yıllara.",
+] as const;
+
 export const howItWorksSteps = [
   "QR kodu telefonunuzla okutun.",
   "Bırakmak istediğiniz anıyı seçin.",
