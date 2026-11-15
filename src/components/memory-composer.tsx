@@ -13,7 +13,7 @@ import {
 } from "@/lib/memory-kinds";
 import { buildMemoryDraft, readDeliveryReceipt } from "@/lib/memory-draft";
 
-const PHOTO_LIMIT = 12;
+const PHOTO_LIMIT = 200;
 
 const fieldClass =
   "mt-3 w-full border-b border-charcoal/20 bg-transparent py-3 text-base text-charcoal outline-none transition-colors duration-300 placeholder:text-taupe/50 focus:border-charcoal";
