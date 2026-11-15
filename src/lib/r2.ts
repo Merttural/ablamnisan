@@ -12,6 +12,14 @@ export function r2Ready(): boolean {
   return readR2Config() !== null;
 }
 
+export function openR2(): { client: S3Client; bucket: string } | null {
+  const config = readR2Config();
+  if (!config) {
+    return null;
+  }
+  return { client: r2Client(config), bucket: config.bucket };
+}
+
 let client: S3Client | null = null;
 
 function readR2Config(): R2Config | null {

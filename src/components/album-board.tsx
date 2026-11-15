@@ -1,0 +1,100 @@
+import { formatFileSize, getMemoryKind } from "@/lib/memory-kinds";
+import type { AlbumFile, AlbumMemory } from "@/lib/album-library";
+
+const dateFormat = new Intl.DateTimeFormat("tr-TR", {
+  dateStyle: "long",
+  timeStyle: "short",
+  timeZone: "Europe/Istanbul",
+});
+
+export function AlbumBoard({ memories }: { memories: AlbumMemory[] }) {
+  if (memories.length === 0) {
+    return <p className="mt-10 text-base leading-7 text-taupe">Henüz bir anı gelmedi.</p>;
+  }
+
+  return (
+    <ul className="mt-10 grid gap-14">
+      {memories.map((memory) => (
+        <li key={memory.id} className="min-w-0 border-t border-charcoal/10 pt-8">
+          <p className="text-base text-taupe">{dateFormat.format(new Date(memory.createdAt))}</p>
+          <h2 className="mt-2 font-serif text-4xl leading-none font-medium text-charcoal">
+            {memory.guestName || "Bir misafir"}
+          </h2>
+          <p className="mt-3 text-base text-charcoal">{getMemoryKind(memory.kind).title}</p>
+          {memory.message ? (
+            <blockquote className="mt-6 border-l border-gold pl-5 font-serif text-2xl leading-snug text-charcoal">
+              {memory.message}
+            </blockquote>
+          ) : null}
+          {memory.files.length > 0 ? (
+            <ul
+              className={`mt-6 grid gap-4 ${memory.kind === "fotograf" ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1"}`}
+            >
+              {memory.files.map((file) => (
+                <li key={file.objectKey} className="min-w-0">
+                  <FileView file={file} kind={memory.kind} />
+                  <a
+                    href={downloadHref(file)}
+                    className="mt-3 inline-flex min-h-11 items-center text-base text-charcoal underline decoration-charcoal/30 underline-offset-4"
+                  >
+                    İndir · {formatFileSize(file.byteSize)}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function FileView({ file, kind }: { file: AlbumFile; kind: AlbumMemory["kind"] }) {
+  if (!file.viewUrl) {
+    return <p className="text-base text-taupe">{file.fileName}</p>;
+  }
+  if (kind === "fotograf" && canPreviewPhoto(file)) {
+    return (
+      // Guest originals stay on R2. This preview must not pass through the image optimizer.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={file.viewUrl}
+        alt={file.fileName}
+        className="aspect-square w-full bg-champagne/40 object-cover"
+      />
+    );
+  }
+  if (kind === "video") {
+    return (
+      <video
+        controls
+        playsInline
+        preload="metadata"
+        src={file.viewUrl}
+        className="max-h-[70vh] w-full bg-charcoal"
+      />
+    );
+  }
+  if (kind === "ses") {
+    return <audio controls preload="metadata" src={file.viewUrl} className="w-full" />;
+  }
+  return <p className="truncate text-base text-taupe">{file.fileName}</p>;
+}
+
+function canPreviewPhoto(file: AlbumFile): boolean {
+  const name = file.fileName.toLowerCase();
+  return (
+    file.mimeType === "image/jpeg" ||
+    file.mimeType === "image/png" ||
+    file.mimeType === "image/webp" ||
+    name.endsWith(".jpg") ||
+    name.endsWith(".jpeg") ||
+    name.endsWith(".png") ||
+    name.endsWith(".webp")
+  );
+}
+
+function downloadHref(file: AlbumFile): string {
+  const params = new URLSearchParams({ anahtar: file.objectKey, ad: file.fileName });
+  return `/api/album/indir?${params.toString()}`;
+}

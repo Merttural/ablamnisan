@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-charcoal/10">
@@ -8,6 +10,12 @@ export function SiteFooter() {
         <p className="text-[0.68rem] uppercase tracking-[0.32em] text-taupe">
           29.11.2026
         </p>
+        <Link
+          href="/giris"
+          className="text-[0.68rem] uppercase tracking-[0.32em] text-taupe underline decoration-charcoal/20 underline-offset-4"
+        >
+          Albüm
+        </Link>
       </div>
     </footer>
   );
