@@ -2,19 +2,21 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import Link from "next/link";
+import { deliverMemory } from "@/lib/deliver-memory";
+import type { DeliveryReceipt } from "@/lib/memory-draft";
 import {
   formatFileSize,
   getMemoryKind,
   isMediaKind,
+  maxGuestName,
+  maxPhotoCount,
   memoryKinds,
   sampleMessages,
   validateMediaFile,
   type MediaKind,
   type MemoryKindId,
 } from "@/lib/memory-kinds";
-import { buildMemoryDraft, readDeliveryReceipt } from "@/lib/memory-draft";
-
-const PHOTO_LIMIT = 200;
+import { buildMemoryDraft } from "@/lib/memory-draft";
 
 const fieldClass =
   "mt-3 w-full border-b border-charcoal/20 bg-transparent py-3 text-base text-charcoal outline-none transition-colors duration-300 placeholder:text-taupe/50 focus:border-charcoal";
@@ -53,6 +55,10 @@ export function MemoryComposer() {
   const [note, setNote] = useState("");
   const [assets, setAssets] = useState<LocalAsset[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<DeliveryReceipt | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sentCount, setSentCount] = useState(0);
+  const [storageReady, setStorageReady] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
   const assetsRef = useRef(assets);
@@ -60,6 +66,25 @@ export function MemoryComposer() {
   useEffect(() => {
     assetsRef.current = assets;
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/ani/durum")
+      .then((response) => response.json())
+      .then((body: { ready?: boolean }) => {
+        if (!cancelled) {
+          setStorageReady(body.ready === true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStorageReady(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -105,10 +130,10 @@ export function MemoryComposer() {
 
     const nextAssets: LocalAsset[] = [];
     let message: string | null = null;
-    const room = kind.id === "fotograf" ? PHOTO_LIMIT - assets.length : 1;
+    const room = kind.id === "fotograf" ? maxPhotoCount - assets.length : 1;
 
     if (room <= 0) {
-      setError(`En fazla ${PHOTO_LIMIT} fotoğraf ekleyebilirsin.`);
+      setError(`En fazla ${maxPhotoCount} fotoğraf ekleyebilirsin.`);
       return;
     }
 
@@ -126,7 +151,7 @@ export function MemoryComposer() {
     }
 
     if (files.length > room && kind.id === "fotograf") {
-      message = `En fazla ${PHOTO_LIMIT} fotoğraf ekleyebilirsin.`;
+      message = `En fazla ${maxPhotoCount} fotoğraf ekleyebilirsin.`;
     }
 
     if (nextAssets.length === 0) {
@@ -171,8 +196,30 @@ export function MemoryComposer() {
     setStep("onay");
   }
 
-  const delivery = readDeliveryReceipt();
-  if (delivery) {
+  async function sendMemory() {
+    if (!kindId || sending || !storageReady) {
+      return;
+    }
+    setSending(true);
+    setSentCount(0);
+    setError(null);
+    try {
+      const next = await deliverMemory({
+        kind: kindId,
+        guestName: name,
+        message: kindId === "mesaj" ? note : "",
+        files: assets.map((asset) => ({ localId: asset.id, file: asset.file })),
+        onProgress: setSentCount,
+      });
+      setReceipt(next);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Gönderilemedi. Dosya gitmedi.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (receipt) {
     return (
       <Shell>
         <ThanksScreen />
@@ -212,7 +259,17 @@ export function MemoryComposer() {
           name={name}
           note={note}
           assets={assets}
-          onEdit={() => setStep("icerik")}
+          sending={sending}
+          sentCount={sentCount}
+          storageReady={storageReady}
+          error={error}
+          onEdit={() => {
+            if (!sending) {
+              setError(null);
+              setStep("icerik");
+            }
+          }}
+          onSend={sendMemory}
         />
       ) : null}
     </Shell>
@@ -351,7 +408,7 @@ function ContentStep({
             <input
               value={name}
               onChange={(event) => onName(event.target.value)}
-              maxLength={40}
+              maxLength={maxGuestName}
               autoComplete="name"
               className={fieldClass}
             />
@@ -392,7 +449,7 @@ function MediaEntry({
           <p className="text-base leading-6 text-taupe">
             {assets.length > 0
               ? `${assets.length} fotoğraf hazır.`
-              : `Toplu yükle ile birden fazlasını seç. En fazla ${PHOTO_LIMIT}.`}
+              : `Toplu yükle ile birden fazlasını seç. En fazla ${maxPhotoCount}.`}
           </p>
         </div>
       ) : null}
@@ -434,14 +491,24 @@ function ReviewStep({
   name,
   note,
   assets,
+  sending,
+  sentCount,
+  storageReady,
+  error,
   onEdit,
+  onSend,
 }: {
   headingRef: RefObject<HTMLHeadingElement | null>;
   kindId: MemoryKindId;
   name: string;
   note: string;
   assets: LocalAsset[];
+  sending: boolean;
+  sentCount: number;
+  storageReady: boolean;
+  error: string | null;
   onEdit: () => void;
+  onSend: () => void;
 }) {
   const kind = getMemoryKind(kindId);
   const draft = buildMemoryDraft({
@@ -488,10 +555,31 @@ function ReviewStep({
         </ul>
       ) : null}
 
-      <p className="mt-8 border border-charcoal/15 bg-champagne/40 px-5 py-4 text-base leading-7 text-charcoal">
-        Henüz gönderilmiyor. Şimdilik yalnızca bu telefonda duruyor.
-      </p>
-      <button type="button" onClick={onEdit} className={`${primaryButton} mt-6`}>
+      {storageReady ? (
+        <>
+          <p className="mt-8 border border-charcoal/15 bg-champagne/40 px-5 py-4 text-base leading-7 text-charcoal">
+            Gönderince dosya telefonundaki haliyle saklanır. Önizleme ayrıdır.
+          </p>
+          {error ? <p className="mt-4 text-base leading-6 text-charcoal">{error}</p> : null}
+          <button type="button" onClick={onSend} disabled={sending} className={`${primaryButton} mt-6`}>
+            {sending
+              ? assets.length > 0
+                ? `${sentCount} / ${assets.length} yükleniyor`
+                : "Gönderiliyor"
+              : "Gönder"}
+          </button>
+        </>
+      ) : (
+        <p className="mt-8 border border-charcoal/15 bg-champagne/40 px-5 py-4 text-base leading-7 text-charcoal">
+          Henüz gönderilmiyor. Şimdilik yalnızca bu telefonda duruyor.
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={onEdit}
+        disabled={sending}
+        className="mt-3 flex min-h-14 w-full items-center justify-center border border-charcoal/30 px-6 text-base text-charcoal disabled:opacity-40"
+      >
         Düzelt
       </button>
       <Link

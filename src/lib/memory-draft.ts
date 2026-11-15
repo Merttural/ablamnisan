@@ -20,8 +20,8 @@ export type MemoryDraft = {
 };
 
 /**
- * Future Cloudflare R2 object. The original file is stored as-is.
- * `downloadPath` is the couple-only route that will stream that object back.
+ * Original file stored as-is on a private Cloudflare R2 bucket.
+ * `objectKey` is the private locator. It is not a public URL.
  */
 export type StoredOriginal = OriginalFileRecord & {
   provider: "cloudflare-r2";
@@ -55,12 +55,4 @@ export function buildMemoryDraft(input: {
     message: input.message.trim(),
     originals: input.files.map((item) => describeOriginal(item.file, item.id)),
   };
-}
-
-/**
- * Real delivery is not connected. This stays empty until a backend
- * returns a receipt for files stored on Cloudflare R2.
- */
-export function readDeliveryReceipt(): DeliveryReceipt | null {
-  return null;
 }

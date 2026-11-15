@@ -91,6 +91,9 @@ export const memoryKinds: MemoryKind[] = [
   },
 ];
 
+export const maxPhotoCount = 200;
+export const maxGuestName = 40;
+
 const kindIds = new Set<MemoryKindId>(memoryKinds.map((kind) => kind.id));
 
 export function isMemoryKindId(value: string | undefined): value is MemoryKindId {
@@ -117,23 +120,28 @@ export function formatFileSize(bytes: number): string {
   return `${megabytes.toFixed(megabytes >= 10 ? 0 : 1)} MB`;
 }
 
-export function fileMatchesKind(file: File, kind: MediaKind): boolean {
-  if (kind.accept.includes(file.type)) {
-    return true;
-  }
-  const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-  return kind.extensions.includes(extension);
+export function validateMediaFile(file: File, kind: MediaKind): string | null {
+  return validateMediaMeta(
+    { fileName: file.name, mimeType: file.type, byteSize: file.size },
+    kind,
+  );
 }
 
-export function validateMediaFile(file: File, kind: MediaKind): string | null {
-  if (file.size <= 0) {
+export function validateMediaMeta(
+  file: { fileName: string; mimeType: string; byteSize: number },
+  kind: MediaKind,
+): string | null {
+  if (!Number.isInteger(file.byteSize) || file.byteSize <= 0) {
     return "Bu dosya boş.";
   }
-  if (!fileMatchesKind(file, kind)) {
-    return `Bu dosya uygun değil. ${kind.typeLabel} kullanabilirsin.`;
-  }
-  if (file.size > kind.maxBytes) {
+  if (file.byteSize > kind.maxBytes) {
     return `Dosya ${kind.maxLabel} sınırını aşıyor. Daha küçük bir dosya seç.`;
+  }
+  const extension = file.fileName.slice(file.fileName.lastIndexOf(".")).toLowerCase();
+  const typeOk = file.mimeType.length > 0 && kind.accept.includes(file.mimeType);
+  const extensionOk = kind.extensions.includes(extension);
+  if (!typeOk && !extensionOk) {
+    return `Bu dosya uygun değil. ${kind.typeLabel} kullanabilirsin.`;
   }
   return null;
 }
