@@ -24,7 +24,7 @@ const primaryButton =
 const choiceButton =
   "flex min-h-16 w-full cursor-pointer items-center justify-center border-2 border-charcoal bg-ivory px-5 py-4 text-center font-serif text-2xl text-charcoal transition-colors duration-300 hover:bg-charcoal hover:text-ivory focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal";
 
-type Step = "karsilama" | "tur" | "icerik" | "onay";
+type Step = "tur" | "icerik" | "onay";
 
 type LocalAsset = {
   id: string;
@@ -33,14 +33,20 @@ type LocalAsset = {
 };
 
 const stepIndex: Record<Step, number> = {
-  karsilama: 1,
-  tur: 2,
-  icerik: 3,
-  onay: 4,
+  tur: 1,
+  icerik: 2,
+  onay: 3,
+};
+
+const kindHint: Record<MemoryKindId, string> = {
+  fotograf: "Kameradan çek veya galeriden seç",
+  video: "Kısa bir video ekle",
+  mesaj: "Birkaç cümle yaz",
+  ses: "Konuş veya dosya seç",
 };
 
 export function MemoryComposer() {
-  const [step, setStep] = useState<Step>("karsilama");
+  const [step, setStep] = useState<Step>("tur");
   const [kindId, setKindId] = useState<MemoryKindId | null>(null);
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
@@ -177,17 +183,9 @@ export function MemoryComposer() {
 
   return (
     <Shell>
-      <p className="text-[0.68rem] uppercase tracking-[0.38em] text-taupe">
-        Adım {stepIndex[step]} / 4
-      </p>
+      <p className="text-base text-taupe">{stepIndex[step]} / 3</p>
 
-      {step === "karsilama" ? (
-        <Welcome headingRef={headingRef} onStart={() => setStep("tur")} />
-      ) : null}
-
-      {step === "tur" ? (
-        <KindStep headingRef={headingRef} onBack={() => setStep("karsilama")} onChoose={chooseKind} />
-      ) : null}
+      {step === "tur" ? <KindStep headingRef={headingRef} onChoose={chooseKind} /> : null}
 
       {step === "icerik" && kind ? (
         <ContentStep
@@ -222,52 +220,17 @@ export function MemoryComposer() {
 
 function Shell({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-x-clip px-5 py-14 md:px-8 md:py-24">
+    <div className="overflow-x-clip px-5 py-8 md:px-8 md:py-20">
       <div className="mx-auto w-full max-w-2xl">{children}</div>
     </div>
   );
 }
 
-function Welcome({
-  headingRef,
-  onStart,
-}: {
-  headingRef: RefObject<HTMLHeadingElement | null>;
-  onStart: () => void;
-}) {
-  return (
-    <>
-      <h1
-        ref={headingRef}
-        tabIndex={-1}
-        className="mt-5 text-balance font-serif text-[2.6rem] leading-[1.02] font-medium tracking-[-0.03em] text-charcoal outline-none sm:text-6xl"
-      >
-        Bu güzel günden bir anı bırak.
-      </h1>
-      <span className="mt-8 block h-px w-12 bg-gold" aria-hidden />
-      <p className="mt-8 max-w-xl text-pretty text-base leading-7 text-taupe md:text-lg md:leading-8">
-        Fotoğrafın, videon veya birkaç güzel kelimen bizim için çok değerli.
-      </p>
-      <button type="button" onClick={onStart} className={`${primaryButton} mt-10 sm:max-w-xs`}>
-        Anını paylaş
-      </button>
-      <Link
-        href="/"
-        className="mt-8 inline-flex min-h-11 items-center text-base text-taupe underline decoration-charcoal/30 underline-offset-4"
-      >
-        Albüme dön
-      </Link>
-    </>
-  );
-}
-
 function KindStep({
   headingRef,
-  onBack,
   onChoose,
 }: {
   headingRef: RefObject<HTMLHeadingElement | null>;
-  onBack: () => void;
   onChoose: (kind: MemoryKindId) => void;
 }) {
   return (
@@ -275,30 +238,35 @@ function KindStep({
       <h1
         ref={headingRef}
         tabIndex={-1}
-        className="mt-5 text-balance font-serif text-4xl leading-[1.05] font-medium tracking-[-0.03em] text-charcoal outline-none sm:text-5xl"
+        className="mt-4 text-balance font-serif text-[2.6rem] leading-[1.02] font-medium tracking-[-0.03em] text-charcoal outline-none sm:text-6xl"
       >
-        Nasıl bir anı bırakmak istersin?
+        Bu güzel günden bir anı bırak.
       </h1>
-      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {memoryKinds.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onChoose(item.id)}
-              className="flex min-h-24 items-center gap-4 border border-charcoal/20 bg-champagne/50 px-5 py-4 text-left transition-colors duration-300 hover:border-charcoal hover:bg-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal"
-            >
-              <Icon className="size-5 shrink-0 text-gold" strokeWidth={1.25} aria-hidden />
-              <span>
-                <span className="block font-serif text-3xl leading-none text-charcoal">{item.title}</span>
-                <span className="mt-2 block text-base leading-6 text-taupe">{item.summary}</span>
-              </span>
-            </button>
-          );
-        })}
+      <p className="mt-5 max-w-xl text-pretty text-base leading-7 text-taupe md:text-lg">
+        Fotoğrafın, videon veya birkaç güzel kelimen bizim için çok değerli.
+      </p>
+      <p className="mt-8 text-base text-charcoal">Birini seç.</p>
+      <div className="mt-3 grid grid-cols-1 gap-3">
+        {memoryKinds.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onChoose(item.id)}
+            className="flex min-h-20 items-center border border-charcoal/20 bg-champagne/50 px-5 py-4 text-left transition-colors duration-300 hover:border-charcoal hover:bg-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal"
+          >
+            <span>
+              <span className="block font-serif text-3xl leading-none text-charcoal">{item.title}</span>
+              <span className="mt-2 block text-base leading-6 text-taupe">{kindHint[item.id]}</span>
+            </span>
+          </button>
+        ))}
       </div>
-      <BackButton onClick={onBack} />
+      <Link
+        href="/"
+        className="mt-6 inline-flex min-h-11 items-center text-base text-taupe underline decoration-charcoal/30 underline-offset-4"
+      >
+        Albüme dön
+      </Link>
     </>
   );
 }
@@ -347,16 +315,6 @@ function ContentStep({
       ) : (
         <div className="mt-8">
           <label className="block">
-            <span className="text-base text-charcoal">Adın, istersen</span>
-            <input
-              value={name}
-              onChange={(event) => onName(event.target.value)}
-              maxLength={40}
-              autoComplete="name"
-              className={fieldClass}
-            />
-          </label>
-          <label className="mt-8 block">
             <span className="text-base text-charcoal">Mesajın</span>
             <textarea
               value={note}
@@ -366,8 +324,18 @@ function ContentStep({
               className={`${fieldClass} resize-none leading-7`}
             />
             <span className="mt-3 block text-base text-taupe">
-              En fazla {kind.maxMessage} karakter · {note.length}/{kind.maxMessage}
+              {note.length}/{kind.maxMessage}
             </span>
+          </label>
+          <label className="mt-8 block">
+            <span className="text-base text-charcoal">Adın, yazmak zorunda değilsin</span>
+            <input
+              value={name}
+              onChange={(event) => onName(event.target.value)}
+              maxLength={40}
+              autoComplete="name"
+              className={fieldClass}
+            />
           </label>
         </div>
       )}
@@ -375,7 +343,7 @@ function ContentStep({
       {error ? <p className="mt-4 text-base leading-6 text-charcoal">{error}</p> : null}
 
       <button type="button" onClick={onReview} className={`${primaryButton} mt-8`}>
-        Kontrol et
+        Devam
       </button>
       <BackButton onClick={onBack} />
     </>
@@ -404,8 +372,8 @@ function MediaEntry({
           <FilePicker kind={kind} label="Toplu yükle" multiple onFiles={onFiles} />
           <p className="text-base leading-6 text-taupe">
             {assets.length > 0
-              ? `${assets.length} fotoğraf seçildi. Toplu yükle ile en fazla ${PHOTO_LIMIT} fotoğraf ekleyebilirsin.`
-              : `Toplu yükle ile bir kerede birden fazla fotoğraf seçebilirsin. En fazla ${PHOTO_LIMIT}.`}
+              ? `${assets.length} fotoğraf hazır.`
+              : `Toplu yükle ile birden fazlasını seç. En fazla ${PHOTO_LIMIT}.`}
           </p>
         </div>
       ) : null}
@@ -420,7 +388,7 @@ function MediaEntry({
         <ul className={`mt-6 grid gap-4 ${kind.id === "fotograf" ? "grid-cols-2" : "grid-cols-1"}`}>
           {assets.map((asset) => (
             <li key={asset.id} className="min-w-0">
-              <Preview kind={kind} asset={asset} />
+              <Preview kind={kind} asset={asset} compact={kind.id === "fotograf"} />
               <div className="mt-3 flex items-center justify-between gap-3">
                 <p className="min-w-0 truncate text-base text-taupe">
                   {asset.file.name} · {formatFileSize(asset.file.size)}
@@ -471,10 +439,11 @@ function ReviewStep({
         tabIndex={-1}
         className="mt-5 text-balance font-serif text-4xl leading-[1.05] font-medium tracking-[-0.03em] text-charcoal outline-none sm:text-5xl"
       >
-        Anını bir kez daha gör.
+        Doğru mu?
       </h1>
-      <p className="mt-6 text-base leading-7 text-taupe">
+      <p className="mt-6 text-base leading-7 text-charcoal">
         {kind.title}
+        {kindId === "fotograf" ? ` · ${assets.length} fotoğraf` : ""}
         {draft.guestName ? ` · ${draft.guestName}` : ""}
       </p>
 
@@ -483,15 +452,17 @@ function ReviewStep({
           {draft.message}
         </blockquote>
       ) : isMediaKind(kind) ? (
-        <ul className="mt-8 grid grid-cols-1 gap-4">
+        <ul className={`mt-8 grid gap-3 ${kind.id === "fotograf" ? "grid-cols-3" : "grid-cols-1"}`}>
           {assets.map((asset) => {
             const original = draft.originals.find((item) => item.localId === asset.id);
             return (
               <li key={asset.id} className="min-w-0">
-                <Preview kind={kind} asset={asset} />
-                <p className="mt-3 truncate text-base text-taupe">
-                  {original?.fileName} · {original ? formatFileSize(original.byteSize) : ""}
-                </p>
+                <Preview kind={kind} asset={asset} compact={kind.id === "fotograf"} />
+                {kind.id === "fotograf" ? null : (
+                  <p className="mt-3 truncate text-base text-taupe">
+                    {original?.fileName} · {original ? formatFileSize(original.byteSize) : ""}
+                  </p>
+                )}
               </li>
             );
           })}
@@ -499,19 +470,10 @@ function ReviewStep({
       ) : null}
 
       <p className="mt-8 border border-charcoal/15 bg-champagne/40 px-5 py-4 text-base leading-7 text-charcoal">
-        {kindId === "mesaj"
-          ? "Gönderim henüz açık değil. Mesajın albüme eklenmedi; şimdilik yalnızca bu telefonda duruyor."
-          : "Gönderim henüz açık değil. Anın albüme eklenmedi; dosyalar yalnızca bu telefonda duruyor."}
+        Henüz gönderilmiyor. Şimdilik yalnızca bu telefonda duruyor.
       </p>
-      <button type="button" disabled className={`${primaryButton} mt-6`}>
-        Gönder
-      </button>
-      <button
-        type="button"
-        onClick={onEdit}
-        className="mt-3 flex min-h-14 w-full items-center justify-center border border-charcoal/30 px-6 py-4 text-center font-serif text-2xl text-charcoal"
-      >
-        Düzenle
+      <button type="button" onClick={onEdit} className={`${primaryButton} mt-6`}>
+        Düzelt
       </button>
       <Link
         href="/"
@@ -546,9 +508,9 @@ function BackButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="mt-4 inline-flex min-h-11 items-center text-base text-taupe underline decoration-charcoal/30 underline-offset-4"
+      className="mt-3 flex min-h-14 w-full items-center justify-center border border-charcoal/30 px-6 text-base text-charcoal"
     >
-      Geri
+      Geri dön
     </button>
   );
 }
@@ -596,7 +558,15 @@ function FilePicker({
   );
 }
 
-function Preview({ kind, asset }: { kind: MediaKind; asset: LocalAsset }) {
+function Preview({
+  kind,
+  asset,
+  compact = false,
+}: {
+  kind: MediaKind;
+  asset: LocalAsset;
+  compact?: boolean;
+}) {
   const [failed, setFailed] = useState(false);
 
   if (failed) {
@@ -614,7 +584,11 @@ function Preview({ kind, asset }: { kind: MediaKind; asset: LocalAsset }) {
       <img
         src={asset.previewUrl}
         alt="Seçilen fotoğrafın önizlemesi"
-        className="max-h-[70svh] w-full bg-champagne object-contain"
+        className={
+          compact
+            ? "aspect-square w-full bg-champagne object-cover"
+            : "max-h-[70svh] w-full bg-champagne object-contain"
+        }
         onError={() => setFailed(true)}
       />
     );
@@ -771,7 +745,7 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
 
 function mediaHelp(kind: MediaKind): string {
   if (kind.id === "fotograf") {
-    return `${kind.typeLabel} kabul edilir. Her fotoğraf en fazla ${kind.maxLabel}.`;
+    return `Her fotoğraf en fazla ${kind.maxLabel}. ${kind.typeLabel} olur.`;
   }
   if (kind.id === "video") {
     return `${kind.typeLabel} kabul edilir. Video en fazla ${kind.maxLabel} olabilir.`;
