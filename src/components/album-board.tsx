@@ -37,7 +37,18 @@ export function AlbumBoard({ memories }: { memories: AlbumMemory[] }) {
             >
               {memory.files.map((file) => (
                 <li key={file.objectKey} className="min-w-0">
-                  <FileView file={file} kind={memory.kind} />
+                  <div className="relative">
+                    <FileView file={file} kind={memory.kind} />
+                    <div className="absolute top-2 right-2 z-10">
+                      <AlbumDeleteButton
+                        memoryId={memory.id}
+                        objectKey={file.objectKey}
+                        label="Sil"
+                        confirmLabel="Evet, sil"
+                        onPhoto
+                      />
+                    </div>
+                  </div>
                   <div className="mt-3 flex flex-wrap items-center gap-x-5">
                     {memory.kind === "fotograf" ? (
                       <AlbumPhotoSave
@@ -54,12 +65,6 @@ export function AlbumBoard({ memories }: { memories: AlbumMemory[] }) {
                         İndir · {formatFileSize(file.byteSize)}
                       </a>
                     )}
-                    <AlbumDeleteButton
-                      memoryId={memory.id}
-                      objectKey={file.objectKey}
-                      label="Sil"
-                      confirmLabel="Evet, sil"
-                    />
                   </div>
                 </li>
               ))}

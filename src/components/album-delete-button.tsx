@@ -8,11 +8,13 @@ export function AlbumDeleteButton({
   objectKey,
   label,
   confirmLabel,
+  onPhoto = false,
 }: {
   memoryId: string;
   objectKey?: string;
   label: string;
   confirmLabel: string;
+  onPhoto?: boolean;
 }) {
   const router = useRouter();
   const [armed, setArmed] = useState(false);
@@ -40,6 +42,10 @@ export function AlbumDeleteButton({
     router.refresh();
   }
 
+  const buttonClass = onPhoto
+    ? "inline-flex min-h-11 items-center bg-ivory px-3 text-base text-charcoal shadow-sm disabled:opacity-50"
+    : "inline-flex min-h-11 items-center border border-charcoal/20 bg-ivory px-4 text-base text-charcoal disabled:opacity-50";
+
   if (!armed) {
     return (
       <span className="inline-flex items-center gap-3">
@@ -49,7 +55,7 @@ export function AlbumDeleteButton({
             setError("");
             setArmed(true);
           }}
-          className="inline-flex min-h-11 items-center text-base text-taupe underline decoration-charcoal/20 underline-offset-4"
+          className={buttonClass}
         >
           {label}
         </button>
@@ -59,21 +65,11 @@ export function AlbumDeleteButton({
   }
 
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-4 gap-y-1">
-      <button
-        type="button"
-        onClick={() => void remove()}
-        disabled={pending}
-        className="inline-flex min-h-11 items-center text-base text-charcoal underline decoration-charcoal/30 underline-offset-4 disabled:opacity-50"
-      >
+    <span className={`inline-flex flex-wrap items-center gap-2 ${onPhoto ? "bg-ivory p-1" : ""}`}>
+      <button type="button" onClick={() => void remove()} disabled={pending} className={buttonClass}>
         {pending ? "Siliniyor" : confirmLabel}
       </button>
-      <button
-        type="button"
-        onClick={() => setArmed(false)}
-        disabled={pending}
-        className="inline-flex min-h-11 items-center text-base text-taupe disabled:opacity-50"
-      >
+      <button type="button" onClick={() => setArmed(false)} disabled={pending} className={buttonClass}>
         Vazgeç
       </button>
       {error ? <span className="text-sm text-charcoal">{error}</span> : null}
