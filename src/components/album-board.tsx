@@ -1,4 +1,5 @@
 import { AlbumDeleteButton } from "@/components/album-delete-button";
+import { AlbumPhotoSave } from "@/components/album-photo-save";
 import { formatFileSize, getMemoryKind } from "@/lib/memory-kinds";
 import type { AlbumFile, AlbumMemory } from "@/lib/album-library";
 
@@ -38,12 +39,21 @@ export function AlbumBoard({ memories }: { memories: AlbumMemory[] }) {
                 <li key={file.objectKey} className="min-w-0">
                   <FileView file={file} kind={memory.kind} />
                   <div className="mt-3 flex flex-wrap items-center gap-x-5">
-                    <a
-                      href={downloadHref(file)}
-                      className="inline-flex min-h-11 items-center text-base text-charcoal underline decoration-charcoal/30 underline-offset-4"
-                    >
-                      İndir · {formatFileSize(file.byteSize)}
-                    </a>
+                    {memory.kind === "fotograf" ? (
+                      <AlbumPhotoSave
+                        href={downloadHref(file)}
+                        viewUrl={file.viewUrl}
+                        fileName={file.fileName}
+                        label={`Galeriye kaydet · ${formatFileSize(file.byteSize)}`}
+                      />
+                    ) : (
+                      <a
+                        href={downloadHref(file)}
+                        className="inline-flex min-h-11 items-center text-base text-charcoal underline decoration-charcoal/30 underline-offset-4"
+                      >
+                        İndir · {formatFileSize(file.byteSize)}
+                      </a>
+                    )}
                     <AlbumDeleteButton
                       memoryId={memory.id}
                       objectKey={file.objectKey}

@@ -35,7 +35,7 @@ export default function AlbumPage() {
           Anılar
         </h1>
         <p className="mt-6 max-w-xl text-base leading-7 text-taupe">
-          İndirme, misafirin yüklediği dosyayı getirir. Silmek, dosyayı depodan da kaldırır.
+          Fotoğraf telefonda galeriye kaydedilir. Silmek, dosyayı depodan da kaldırır.
         </p>
         <Suspense fallback={<p className="mt-10 text-base text-taupe">Albüm açılıyor.</p>}>
           <PrivateAlbum />
