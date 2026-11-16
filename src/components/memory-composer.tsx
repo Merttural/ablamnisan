@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
+import fixWebmDuration from "fix-webm-duration";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { AlbumImage } from "@/components/album-image";
@@ -855,7 +856,7 @@ function Preview({
     <audio
       src={asset.previewUrl}
       controls
-      preload="metadata"
+      preload="auto"
       className="w-full"
       onError={() => setFailed(true)}
     />
@@ -871,6 +872,7 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
   const timerRef = useRef<number | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const discardRef = useRef(false);
+  const startedAtRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -924,20 +926,30 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
       };
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
-        const shouldSave = !discardRef.current;
-        discardRef.current = false;
-        if (shouldSave) {
-          const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
-          const extension = blob.type.includes("mp4") ? "m4a" : "webm";
-          onFile(new File([blob], `ses-kaydi.${extension}`, { type: blob.type || "audio/webm" }));
-        }
-        setRecording(false);
-        recorderRef.current = null;
-        streamRef.current = null;
+        window.setTimeout(() => {
+          const shouldSave = !discardRef.current;
+          discardRef.current = false;
+          const durationMs = Math.max(1, Date.now() - startedAtRef.current);
+          if (shouldSave) {
+            const type = audioBaseType(recorder.mimeType || mimeType || "audio/webm");
+            const blob = new Blob(chunksRef.current, { type });
+            if (blob.size < 1024) {
+              setLocalError("Kayıt oluşmadı. Biraz daha konuşup tekrar dene.");
+            } else {
+              void saveRecording(blob, type, durationMs)
+                .then(onFile)
+                .catch(() => setLocalError("Kayıt oluşmadı. Biraz daha konuşup tekrar dene."));
+            }
+          }
+          setRecording(false);
+          recorderRef.current = null;
+          streamRef.current = null;
+        }, 0);
       };
       recorderRef.current = recorder;
       streamRef.current = stream;
-      recorder.start();
+      startedAtRef.current = Date.now();
+      recorder.start(250);
       setRecording(true);
       setElapsed(0);
       const startedAt = Date.now();
@@ -985,6 +997,20 @@ function VoiceCapture({ kind, onFile }: { kind: MediaKind; onFile: (file: File) 
       {localError ? <p className="text-base leading-6 text-charcoal">{localError}</p> : null}
     </div>
   );
+}
+
+function audioBaseType(mimeType: string): string {
+  const base = mimeType.split(";")[0]?.trim().toLowerCase() || "audio/webm";
+  if (base === "audio/m4a" || base === "audio/x-m4a") {
+    return "audio/mp4";
+  }
+  return base.startsWith("audio/") ? base : "audio/webm";
+}
+
+async function saveRecording(blob: Blob, type: string, durationMs: number) {
+  const playable = type === "audio/webm" ? await fixWebmDuration(blob, durationMs, { logger: false }) : blob;
+  const extension = type.includes("mp4") ? "m4a" : type.includes("wav") ? "wav" : type.includes("mpeg") ? "mp3" : "webm";
+  return new File([playable], `ses-kaydi.${extension}`, { type });
 }
 
 function mediaHelp(kind: MediaKind): string {

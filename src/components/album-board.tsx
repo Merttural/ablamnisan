@@ -103,7 +103,10 @@ function FileView({ file, kind }: { file: AlbumFile; kind: AlbumMemory["kind"] }
     );
   }
   if (kind === "ses") {
-    return <audio controls preload="metadata" src={file.viewUrl} className="w-full" />;
+    if (file.byteSize < 1024) {
+      return <p className="text-base text-taupe">Bu kayıt boş kalmış. Yeniden kaydetmek gerekir.</p>;
+    }
+    return <audio controls preload="auto" src={file.viewUrl} className="w-full" />;
   }
   return <p className="truncate text-base text-taupe">{file.fileName}</p>;
 }

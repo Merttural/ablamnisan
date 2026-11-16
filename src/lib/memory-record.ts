@@ -120,10 +120,10 @@ export function planUploads(memoryId: string, submission: MemorySubmission): Pre
     return {
       localId: file.localId,
       objectKey: `orijinaller/${memoryId}/${String(index).padStart(3, "0")}${extension}`,
-      contentType: kind.accept.includes(file.mimeType) ? file.mimeType : "application/octet-stream",
+      contentType: storedContentType(file.mimeType, kind),
       byteSize: file.byteSize,
       fileName: file.fileName,
-      mimeType: file.mimeType || "application/octet-stream",
+      mimeType: storedContentType(file.mimeType, kind),
     };
   });
 }
@@ -163,6 +163,14 @@ function readFile(input: unknown): IncomingFile | null {
     mimeType: file.mimeType,
     byteSize: file.byteSize,
   };
+}
+
+function storedContentType(mimeType: string, kind: MediaKind): string {
+  const base = mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
+  if (kind.accept.includes(base)) {
+    return base;
+  }
+  return "application/octet-stream";
 }
 
 function extensionFor(file: IncomingFile, kind: MediaKind): string {

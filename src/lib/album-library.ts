@@ -247,18 +247,34 @@ async function parseFile(item: unknown, r2: OpenBucket): Promise<AlbumFile | nul
     fileName: file.fileName.slice(0, 180),
     mimeType: file.mimeType.slice(0, 120),
     byteSize: file.byteSize,
-    viewUrl: await signView(r2, file.objectKey),
+    viewUrl: await signView(r2, file.objectKey, file.mimeType.slice(0, 120)),
   };
 }
 
-async function signView(r2: OpenBucket, objectKey: string): Promise<string | null> {
+async function signView(r2: OpenBucket, objectKey: string, mimeType: string): Promise<string | null> {
   try {
-    const command = new GetObjectCommand({ Bucket: r2.bucket, Key: objectKey });
+    const contentType = playbackContentType(mimeType);
+    const command = new GetObjectCommand({
+      Bucket: r2.bucket,
+      Key: objectKey,
+      ...(contentType ? { ResponseContentType: contentType } : {}),
+    });
     return await getSignedUrl(r2.client, command, { expiresIn: 15 * 60 });
   } catch (error) {
     console.error("R2 view link failed", error instanceof Error ? error.name : "unknown");
     return null;
   }
+}
+
+function playbackContentType(mimeType: string): string | undefined {
+  const base = mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
+  if (base === "audio/m4a" || base === "audio/x-m4a") {
+    return "audio/mp4";
+  }
+  if (base.startsWith("audio/") || base.startsWith("video/") || base.startsWith("image/")) {
+    return base;
+  }
+  return undefined;
 }
 
 function attachmentName(fileName: string): string {
