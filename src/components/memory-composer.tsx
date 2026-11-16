@@ -189,6 +189,10 @@ export function MemoryComposer() {
     if (!kindId) {
       return;
     }
+    if (name.trim().length === 0) {
+      setError("Önce adını yaz.");
+      return;
+    }
     if (kindId === "mesaj" && note.trim().length === 0) {
       setError("Önce bir mesaj yaz.");
       return;
@@ -491,7 +495,10 @@ function ContentStep({
       </h1>
 
       {isMediaKind(kind) ? (
-        <MediaEntry kind={kind} assets={assets} onFiles={onFiles} onRemove={onRemove} />
+        <>
+          <MediaEntry kind={kind} assets={assets} onFiles={onFiles} onRemove={onRemove} />
+          <NameField name={name} onName={onName} />
+        </>
       ) : (
         <div className="mt-8">
           <p className="text-base text-charcoal">Bir örnek seç veya kendin yaz.</p>
@@ -525,16 +532,7 @@ function ContentStep({
               {note.length}/{kind.maxMessage}
             </span>
           </label>
-          <label className="mt-8 block">
-            <span className="text-base text-charcoal">Adın, yazmak zorunda değilsin</span>
-            <input
-              value={name}
-              onChange={(event) => onName(event.target.value)}
-              maxLength={maxGuestName}
-              autoComplete="name"
-              className={fieldClass}
-            />
-          </label>
+          <NameField name={name} onName={onName} />
         </div>
       )}
 
@@ -545,6 +543,23 @@ function ContentStep({
       </button>
       <BackButton onClick={onBack} />
     </>
+  );
+}
+
+function NameField({ name, onName }: { name: string; onName: (value: string) => void }) {
+  return (
+    <label className="mt-8 block">
+      <span className="text-base text-charcoal">Adın</span>
+      <input
+        value={name}
+        onChange={(event) => onName(event.target.value)}
+        maxLength={maxGuestName}
+        autoComplete="name"
+        required
+        className={fieldClass}
+      />
+      <span className="mt-3 block text-base text-taupe">Paylaşmadan önce adını yaz.</span>
+    </label>
   );
 }
 

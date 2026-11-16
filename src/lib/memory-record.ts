@@ -53,6 +53,9 @@ export function parseSubmission(
 
   const guestName = body.guestName.trim();
   const message = body.message.trim();
+  if (guestName.length === 0) {
+    return { ok: false, error: "Önce adını yaz." };
+  }
   if (guestName.length > maxGuestName) {
     return { ok: false, error: "Ad çok uzun." };
   }
