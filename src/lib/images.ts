@@ -29,6 +29,12 @@ export const albumPhotos = {
     width: 864,
     height: 1152,
   },
+  welcome: {
+    src: "/images/karsilama.jpg",
+    alt: "Alkan ve Gamze'nin nişan çizimi: yüzük, beyaz güller ve deniz kenarı.",
+    width: 1024,
+    height: 682,
+  },
   place: {
     src: "/images/place.jpg",
     alt: "Ahşap masada keten peçete, tek bir gül ve ince bir kadeh.",

@@ -310,11 +310,11 @@ function WelcomeStep({
 }) {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col items-center text-center">
-      <div className="w-full max-w-xs bg-ivory p-3 shadow-[0_16px_40px_rgba(41,39,34,0.08)]">
-        <div className="relative aspect-[4/5] overflow-hidden bg-champagne">
+      <div className="w-full bg-ivory p-3 shadow-[0_16px_40px_rgba(41,39,34,0.08)]">
+        <div className="relative aspect-[1024/682] overflow-hidden bg-charcoal">
           <AlbumImage
-            photo={albumPhotos.hands}
-            sizes="320px"
+            photo={albumPhotos.welcome}
+            sizes="(max-width: 448px) 100vw, 448px"
             priority
             className="object-cover"
           />
