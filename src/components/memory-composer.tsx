@@ -2,7 +2,10 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import { AlbumImage } from "@/components/album-image";
 import { deliverMemory } from "@/lib/deliver-memory";
+import { albumPhotos } from "@/lib/images";
 import type { DeliveryReceipt } from "@/lib/memory-draft";
 import {
   formatFileSize,
@@ -10,7 +13,6 @@ import {
   isMediaKind,
   maxGuestName,
   maxPhotoCount,
-  memoryKinds,
   sampleMessages,
   validateMediaFile,
   type MediaKind,
@@ -27,7 +29,7 @@ const primaryButton =
 const choiceButton =
   "flex min-h-16 w-full cursor-pointer items-center justify-center border-2 border-charcoal bg-ivory px-5 py-4 text-center font-serif text-2xl text-charcoal transition-colors duration-300 hover:bg-charcoal hover:text-ivory focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal";
 
-type Step = "tur" | "icerik" | "onay";
+type Step = "karsilama" | "tur" | "hazirlik" | "icerik" | "onay";
 
 type LocalAsset = {
   id: string;
@@ -35,21 +37,24 @@ type LocalAsset = {
   previewUrl: string;
 };
 
-const stepIndex: Record<Step, number> = {
-  tur: 1,
-  icerik: 2,
-  onay: 3,
+const guestOrder: MemoryKindId[] = ["fotograf", "video", "ses", "mesaj"];
+
+const guestLabel: Record<MemoryKindId, string> = {
+  fotograf: "Fotoğraf",
+  video: "Video",
+  ses: "Ses Kaydı",
+  mesaj: "Not",
 };
 
 const kindHint: Record<MemoryKindId, string> = {
-  fotograf: "Kameradan çek veya galeriden seç",
-  video: "Kısa bir video ekle",
-  mesaj: "Birkaç cümle yaz",
-  ses: "Konuş veya dosya seç",
+  fotograf: "Galeriden seç ya da çek",
+  video: "Telefonundaki kareler",
+  ses: "Mikrofondan kısa bir mesaj",
+  mesaj: "Birkaç satırlık bir dilek",
 };
 
 export function MemoryComposer() {
-  const [step, setStep] = useState<Step>("tur");
+  const [step, setStep] = useState<Step>("karsilama");
   const [kindId, setKindId] = useState<MemoryKindId | null>(null);
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
@@ -177,7 +182,7 @@ export function MemoryComposer() {
       setKindId(next);
     }
     setError(null);
-    setStep("icerik");
+    setStep(next === "fotograf" ? "hazirlik" : "icerik");
   }
 
   function goToReview() {
@@ -231,9 +236,17 @@ export function MemoryComposer() {
 
   return (
     <Shell>
-      <p className="text-base text-taupe">{stepIndex[step]} / 3</p>
+      {step === "karsilama" ? (
+        <WelcomeStep headingRef={headingRef} onShare={() => setStep("tur")} />
+      ) : null}
 
-      {step === "tur" ? <KindStep headingRef={headingRef} onChoose={chooseKind} /> : null}
+      {step === "tur" ? (
+        <KindStep headingRef={headingRef} onChoose={chooseKind} onBack={() => setStep("karsilama")} />
+      ) : null}
+
+      {step === "hazirlik" ? (
+        <PhotoPrepStep headingRef={headingRef} onStart={() => setStep("icerik")} onBack={() => setStep("tur")} />
+      ) : null}
 
       {step === "icerik" && kind ? (
         <ContentStep
@@ -247,7 +260,7 @@ export function MemoryComposer() {
           onNote={setNote}
           onFiles={addFiles}
           onRemove={removeAsset}
-          onBack={() => setStep("tur")}
+          onBack={() => setStep(kindId === "fotograf" ? "hazirlik" : "tur")}
           onReview={goToReview}
         />
       ) : null}
@@ -284,48 +297,157 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
+function WelcomeStep({
+  headingRef,
+  onShare,
+}: {
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  onShare: () => void;
+}) {
+  return (
+    <div className="mx-auto flex w-full max-w-md flex-col items-center text-center">
+      <div className="w-full max-w-xs bg-ivory p-3 shadow-[0_16px_40px_rgba(41,39,34,0.08)]">
+        <div className="relative aspect-[4/5] overflow-hidden bg-champagne">
+          <AlbumImage
+            photo={albumPhotos.hands}
+            sizes="320px"
+            priority
+            className="object-cover"
+          />
+        </div>
+        <h1
+          ref={headingRef}
+          tabIndex={-1}
+          className="py-5 font-serif text-4xl leading-none font-medium tracking-[-0.03em] text-charcoal outline-none"
+        >
+          Alkan <span className="italic text-taupe">&</span> Gamze
+        </h1>
+      </div>
+      <p className="mt-8 max-w-sm font-serif text-2xl leading-snug text-charcoal">
+        En güzel anılar, sevdiklerimizle paylaştıklarımızdır.
+      </p>
+      <button type="button" onClick={onShare} className={`${primaryButton} mt-8 rounded-full`}>
+        Anılarını Paylaş
+      </button>
+      <p className="mt-10 font-serif text-xl leading-snug text-taupe">
+        Anılarınız yalnızca çiftle paylaşılır.
+      </p>
+    </div>
+  );
+}
+
 function KindStep({
   headingRef,
   onChoose,
+  onBack,
 }: {
   headingRef: RefObject<HTMLHeadingElement | null>;
   onChoose: (kind: MemoryKindId) => void;
+  onBack: () => void;
 }) {
   return (
     <>
+      <BackLink onClick={onBack} label="Geri" />
+      <p className="mt-8 text-center text-[0.68rem] uppercase tracking-[0.32em] text-taupe">
+        Anılarını paylaş
+      </p>
       <h1
         ref={headingRef}
         tabIndex={-1}
-        className="mt-4 text-balance font-serif text-[2.6rem] leading-[1.02] font-medium tracking-[-0.03em] text-charcoal outline-none sm:text-6xl"
+        className="mt-3 text-center font-serif text-4xl leading-none font-medium tracking-[-0.03em] text-charcoal outline-none sm:text-5xl"
       >
-        Bu güzel günden bir anı bırak.
+        Ne paylaşmak istersin?
       </h1>
-      <p className="mt-5 max-w-xl text-pretty text-base leading-7 text-taupe md:text-lg">
-        Fotoğrafın, videon veya birkaç güzel kelimen bizim için çok değerli.
-      </p>
-      <p className="mt-8 text-base text-charcoal">Birini seç.</p>
-      <div className="mt-3 grid grid-cols-1 gap-3">
-        {memoryKinds.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onChoose(item.id)}
-            className="flex min-h-20 items-center border border-charcoal/20 bg-champagne/50 px-5 py-4 text-left transition-colors duration-300 hover:border-charcoal hover:bg-champagne focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal"
-          >
-            <span>
-              <span className="block font-serif text-3xl leading-none text-charcoal">{item.title}</span>
-              <span className="mt-2 block text-base leading-6 text-taupe">{kindHint[item.id]}</span>
-            </span>
-          </button>
-        ))}
+      <div className="mx-auto mt-8 grid w-full max-w-md gap-3">
+        {guestOrder.map((id) => {
+          const item = getMemoryKind(id);
+          const Icon = item.icon;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onChoose(id)}
+              className="flex min-h-20 items-center gap-4 rounded-2xl border border-charcoal/10 bg-champagne/40 px-4 py-4 text-left transition-colors duration-300 hover:border-charcoal/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-charcoal"
+            >
+              <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-ivory text-charcoal">
+                <Icon className="size-5" strokeWidth={1.5} aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-lg leading-none text-charcoal">{guestLabel[id]}</span>
+                <span className="mt-2 block text-base leading-6 text-taupe">{kindHint[id]}</span>
+              </span>
+              <ChevronRight className="size-5 shrink-0 text-taupe" strokeWidth={1.5} aria-hidden />
+            </button>
+          );
+        })}
       </div>
-      <Link
-        href="/"
-        className="mt-6 inline-flex min-h-11 items-center text-base text-taupe underline decoration-charcoal/30 underline-offset-4"
-      >
-        Albüme dön
-      </Link>
     </>
+  );
+}
+
+function PhotoPrepStep({
+  headingRef,
+  onStart,
+  onBack,
+}: {
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  onStart: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-md">
+      <BackLink onClick={onBack} label="Geri" />
+      <p className="mt-8 text-center text-[0.68rem] uppercase tracking-[0.32em] text-taupe">Fotoğraf</p>
+      <h1
+        ref={headingRef}
+        tabIndex={-1}
+        className="mt-3 text-center font-serif text-4xl leading-none font-medium tracking-[-0.03em] text-charcoal outline-none"
+      >
+        Başlamadan önce
+      </h1>
+      <ol className="mt-8 grid gap-3">
+        <li className="rounded-2xl bg-champagne/50 px-5 py-5">
+          <p className="text-base text-charcoal">
+            <span className="mr-2 text-taupe">1</span>
+            Tek seferde en fazla 200 fotoğraf
+          </p>
+          <p className="mt-2 text-base leading-7 text-taupe">
+            Daha fazlası varsa merak etme. Bu yükleme bitince kalanları tekrar seçebilirsin.
+          </p>
+        </li>
+        <li className="rounded-2xl bg-champagne/50 px-5 py-5">
+          <p className="text-base text-charcoal">
+            <span className="mr-2 text-taupe">2</span>
+            Seçerken biraz bekleyebilirsin
+          </p>
+          <p className="mt-2 text-base leading-7 text-taupe">
+            Çok sayıda seçersen telefonun hepsini hazırlaması birkaç saniye sürebilir. Takıldı sanma, biraz bekle yeter.
+          </p>
+        </li>
+      </ol>
+      <button type="button" onClick={onStart} className={`${primaryButton} mt-8 rounded-full text-lg`}>
+        Seçmeye başla
+      </button>
+      <button
+        type="button"
+        onClick={onBack}
+        className="mt-4 flex min-h-11 w-full items-center justify-center text-base text-taupe"
+      >
+        Listeye dön
+      </button>
+    </div>
+  );
+}
+
+function BackLink({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex min-h-11 items-center rounded-full border border-charcoal/15 px-4 text-base text-charcoal"
+    >
+      {label}
+    </button>
   );
 }
 
