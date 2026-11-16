@@ -491,7 +491,7 @@ function ContentStep({
         tabIndex={-1}
         className="mt-5 font-serif text-4xl leading-none font-medium tracking-[-0.03em] text-charcoal outline-none sm:text-5xl"
       >
-        {kind.title}
+        {guestLabel[kindId]}
       </h1>
 
       {isMediaKind(kind) ? (
@@ -501,7 +501,7 @@ function ContentStep({
         </>
       ) : (
         <div className="mt-8">
-          <p className="text-base text-charcoal">Bir örnek seç veya kendin yaz.</p>
+          <p className="text-base text-charcoal">Bir dilek seç veya kendi cümleni yaz.</p>
           <ul className="mt-3 grid gap-2">
             {sampleMessages.map((sample) => {
               const selected = note === sample;
@@ -665,7 +665,7 @@ function ReviewStep({
         Doğru mu?
       </h1>
       <p className="mt-6 text-base leading-7 text-charcoal">
-        {kind.title}
+        {guestLabel[kindId]}
         {kindId === "fotograf" ? ` · ${assets.length} fotoğraf` : ""}
         {draft.guestName ? ` · ${draft.guestName}` : ""}
       </p>

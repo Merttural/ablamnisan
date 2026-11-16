@@ -147,16 +147,14 @@ export function validateMediaMeta(
 }
 
 export const sampleMessages = [
-  "Alkan ve Gamze, bu güzel gününüzde yanınızda olmak çok güzel. Bir ömür boyu mutluluklar.",
-  "Sevginiz bize de iyi geldi. Nice mutlu yıllara.",
-  "Bugün çok güzelsiniz. Yolunuz açık, eviniz bereketli olsun.",
-  "Sizi böyle mutlu görmek yetti bize. Ömrünüz bir olsun.",
-  "Kalbiniz hiç eksilmesin. Tebrikler, sizi seviyoruz.",
-  "Bu akşamın neşesi yıllar sonra da sürsün.",
-  "Birlikte çok güzelsiniz. Yeni başlangıcınız kutlu olsun.",
-  "Gözlerinizdeki sevinç bugünün en güzel hali. Mutluluklar.",
-  "İyi ki varsınız. Bu özel gününüzde sizi sevgiyle anıyoruz.",
-  "El ele, gönül gönüle. Nice bayramlara, nice yıllara.",
+  "Alkan ve Gamze, bu güzel günde yanınızda olmak çok kıymetli. Ömrünüz sevgiyle dolsun.",
+  "Birbirinizde bulduğunuz huzur hiç eksilmesin. Yolunuz açık olsun.",
+  "El ele yürüdüğünüz bu yolda mutluluğunuz daim olsun.",
+  "Gülüşleriniz bugünün en güzel hali. Nice sağlıklı yıllara.",
+  "İyi ki varsınız. Bu gün kalbimizde güzel bir iz bıraktı.",
+  "Yuvanız şen, günleriniz aydın olsun. Bir ömür boyu yan yana kalın.",
+  "Bugün çok güzelsiniz. Yeni başlangıcınız kutlu olsun.",
+  "Bu akşamın neşesi yıllar sonra da sürsün. Sizi seviyoruz.",
 ] as const;
 
 export const howItWorksSteps = [
