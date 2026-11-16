@@ -1,3 +1,4 @@
+import { AlbumDeleteButton } from "@/components/album-delete-button";
 import { formatFileSize, getMemoryKind } from "@/lib/memory-kinds";
 import type { AlbumFile, AlbumMemory } from "@/lib/album-library";
 
@@ -17,9 +18,12 @@ export function AlbumBoard({ memories }: { memories: AlbumMemory[] }) {
       {memories.map((memory) => (
         <li key={memory.id} className="min-w-0 border-t border-charcoal/10 pt-8">
           <p className="text-base text-taupe">{dateFormat.format(new Date(memory.createdAt))}</p>
-          <h2 className="mt-2 font-serif text-4xl leading-none font-medium text-charcoal">
-            {memory.guestName || "Bir misafir"}
-          </h2>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+            <h2 className="font-serif text-4xl leading-none font-medium text-charcoal">
+              {memory.guestName || "Bir misafir"}
+            </h2>
+            <AlbumDeleteButton memoryId={memory.id} label="Anıyı sil" confirmLabel="Evet, anıyı sil" />
+          </div>
           <p className="mt-3 text-base text-charcoal">{getMemoryKind(memory.kind).title}</p>
           {memory.message ? (
             <blockquote className="mt-6 border-l border-gold pl-5 font-serif text-2xl leading-snug text-charcoal">
@@ -33,12 +37,20 @@ export function AlbumBoard({ memories }: { memories: AlbumMemory[] }) {
               {memory.files.map((file) => (
                 <li key={file.objectKey} className="min-w-0">
                   <FileView file={file} kind={memory.kind} />
-                  <a
-                    href={downloadHref(file)}
-                    className="mt-3 inline-flex min-h-11 items-center text-base text-charcoal underline decoration-charcoal/30 underline-offset-4"
-                  >
-                    İndir · {formatFileSize(file.byteSize)}
-                  </a>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-5">
+                    <a
+                      href={downloadHref(file)}
+                      className="inline-flex min-h-11 items-center text-base text-charcoal underline decoration-charcoal/30 underline-offset-4"
+                    >
+                      İndir · {formatFileSize(file.byteSize)}
+                    </a>
+                    <AlbumDeleteButton
+                      memoryId={memory.id}
+                      objectKey={file.objectKey}
+                      label="Sil"
+                      confirmLabel="Evet, sil"
+                    />
+                  </div>
                 </li>
               ))}
             </ul>

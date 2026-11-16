@@ -1,4 +1,4 @@
-import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 type R2Config = {
@@ -79,6 +79,56 @@ export async function originalByteSize(objectKey: string): Promise<number | null
   } catch (error) {
     console.error("R2 head failed", error instanceof Error ? error.name : "unknown");
     return null;
+  }
+}
+
+/** Deletes each key, then confirms it is gone. Returns only the keys that no longer exist. */
+export async function deleteStoredObjects(objectKeys: string[]): Promise<string[]> {
+  const config = readR2Config();
+  if (!config || objectKeys.length === 0) {
+    return [];
+  }
+  const client = r2Client(config);
+  const gone: string[] = [];
+  let cursor = 0;
+  async function worker() {
+    while (cursor < objectKeys.length) {
+      const objectKey = objectKeys[cursor];
+      cursor += 1;
+      if (!objectKey) {
+        continue;
+      }
+      try {
+        await client.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: objectKey }));
+      } catch (error) {
+        console.error("R2 delete failed", error instanceof Error ? error.name : "unknown");
+        continue;
+      }
+      if (await objectIsGone(client, config.bucket, objectKey)) {
+        gone.push(objectKey);
+      }
+    }
+  }
+  const workers = Math.min(5, objectKeys.length);
+  await Promise.all(Array.from({ length: workers }, () => worker()));
+  return gone;
+}
+
+async function objectIsGone(client: S3Client, bucket: string, objectKey: string): Promise<boolean> {
+  try {
+    await client.send(new HeadObjectCommand({ Bucket: bucket, Key: objectKey }));
+    return false;
+  } catch (error) {
+    const status =
+      error && typeof error === "object" && "$metadata" in error
+        ? (error.$metadata as { httpStatusCode?: number }).httpStatusCode
+        : undefined;
+    const name = error instanceof Error ? error.name : "";
+    if (status === 404 || name === "NotFound" || name === "NoSuchKey") {
+      return true;
+    }
+    console.error("R2 delete check failed", name || "unknown");
+    return false;
   }
 }
 
