@@ -89,6 +89,7 @@ export async function deleteStoredObjects(objectKeys: string[]): Promise<string[
     return [];
   }
   const client = r2Client(config);
+  const bucket = config.bucket;
   const gone: string[] = [];
   let cursor = 0;
   async function worker() {
@@ -99,12 +100,12 @@ export async function deleteStoredObjects(objectKeys: string[]): Promise<string[
         continue;
       }
       try {
-        await client.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: objectKey }));
+        await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey }));
       } catch (error) {
         console.error("R2 delete failed", error instanceof Error ? error.name : "unknown");
         continue;
       }
-      if (await objectIsGone(client, config.bucket, objectKey)) {
+      if (await objectIsGone(client, bucket, objectKey)) {
         gone.push(objectKey);
       }
     }
